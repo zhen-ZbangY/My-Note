@@ -1,0 +1,118 @@
+案例4： 使用c语言编写一个一直输出hello,world的程序，制作成镜像
+
+[root@docker python2]# cd /myapp/
+[root@docker myapp]# ls
+busybox  python  python2
+[root@docker myapp]# mkdir c
+[root@docker myapp]# ls
+busybox  c  python  python2
+[root@docker myapp]#cd  c
+[root@docker c]# 
+编写核心代码
+[root@docker c]# vim hello.c
+#include <stdio.h>
+#include <unistd.h>  // 引入sleep函数头文件
+
+int main() {
+    while (1) {
+        printf("hello, world,sanchuang\n");
+        sleep(1);  // 延迟1秒，单位：秒
+    }
+    return 0;
+}
+
+将核心的c语言代码编译成二进制程序
+使用gcc编译器--》是linux系统里的c语言的编译器
+[root@docker c]# yum install gcc  -y
+
+[root@docker c]# gcc -o hello  hello.c 
+-o 指定输出的二进制文件的名字  output file
+
+[root@docker c]# ls
+hello  hello.c
+[root@docker c]# 
+
+[root@docker c]# ll
+total 24
+-rwxr-xr-x 1 root root 16760 Jan 28 15:06 hello
+-rw-r--r-- 1 root root   214 Jan 28 15:04 hello.c
+[root@docker c]# ./hello   运行程序
+hello, world,sanchuang
+hello, world,sanchuang
+hello, world,sanchuang
+hello, world,sanchuang
+hello, world,sanchuang
+hello, world,sanchuang
+^C
+[root@docker c]# 
+编写Dockerfile
+[root@docker c]# vim Dockerfile
+[root@docker c]# cat Dockerfile 
+FROM  busybox:latest
+WORKDIR  /
+LABEL maintainer="hello,world Maintainers <695811769@qq.com>"
+ENV AUTHOR=fengdeyong
+ENV VERSION=1.0
+COPY  .  /
+CMD ["/hello"]
+
+[root@docker c]# 
+检查基础镜像是否存在？
+[root@docker c]# docker images|grep busybox
+WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+busybox:latest                                                                  ea6157971956       9.16MB         4.67MB   U  
+
+制作镜像
+[root@docker c]# docker  build  -t schello:1.0  .
+[+] Building 0.3s (7/7) FINISHED                                                              docker:default
+ => [internal] load build definition from Dockerfile                                                    0.0s
+ => => transferring dockerfile: 198B                                                                    0.0s
+ => [internal] load metadata for docker.io/library/busybox:latest                                       0.0s
+ => [internal] load .dockerignore                                                                       0.0s
+ => => transferring context: 2B                                                                         0.0s
+ => [internal] load build context                                                                       0.0s
+ => => transferring context: 17.25kB                                                                    0.0s
+ => CACHED [1/3] FROM docker.io/library/busybox:latest@sha256:ea6157971956293af8a6a32929c239a73287b158  0.0s
+ => => resolve docker.io/library/busybox:latest@sha256:ea6157971956293af8a6a32929c239a73287b158110053b  0.0s
+ => [2/3] COPY  .  /                                                                                    0.0s
+ => exporting to image                                                                                  0.2s
+ => => exporting layers                                                                                 0.0s
+ => => exporting manifest sha256:d6e5440937a2ea27bb47838caadba9707b84f217f17b5b3254b321d7eb8681ea       0.0s
+ => => exporting config sha256:c2ac65f40419573d394f42b320a9793218fe8ac66b64859a9abc593527a4ea75         0.0s
+ => => exporting attestation manifest sha256:0aa38c67053559cde297e3e644338dc2a0f8acfc40e378c8123020346  0.0s
+ => => exporting manifest list sha256:47376df8290e3c51bdd2ef58594f06b5333f16147efec951cc16b5ce72d4845f  0.0s
+ => => naming to docker.io/library/schello:1.0                                                          0.0s
+ => => unpacking to docker.io/library/schello:1.0                                                       0.0s
+[root@docker c]# 
+
+[root@docker c]# docker images|grep schello
+WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+schello:1.0                                                                     47376df8290e        9.2MB         4.68MB        
+[root@docker c]#
+
+启动容器
+[root@docker c]# docker run -it  --name schello-1  schello:1.0
+hello, world,sanchuang
+hello, world,sanchuang
+hello, world,sanchuang
+
+
+15:45上课
+
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/ubuntu:22.04
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/ubuntu:22.04  docker.io/ubuntu:22.04
+
+[root@docker c]# cat Dockerfile 
+FROM  ubuntu:22.04
+WORKDIR  /
+LABEL maintainer="hello,world Maintainers <695811769@qq.com>"
+ENV AUTHOR=fengdeyong
+ENV VERSION=1.0
+COPY  .  /
+CMD ["/hello"]
+[root@docker c]# docker  build  -t schello:1.5  .
+[root@docker c]# docker run -it  --name schello-5  schello:1.5
+hello, world,sanchuang
+hello, world,sanchuang
+====

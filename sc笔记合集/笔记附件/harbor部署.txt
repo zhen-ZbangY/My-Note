@@ -1,0 +1,681 @@
+
+容器编排工具：
+	1.compose
+	2.swarm
+	3.k8s
+
+
+docker 镜像如何分享给其他的人使用？
+	docker hub 创建账户
+	把你的镜像 push 上去
+
+
+ ACR  是阿里云提供给用户的镜像仓库（个人或者企业使用）---》私有仓库
+1.去阿里云注册开通个人版的容器镜像服务
+2.创建一个私有的仓库
+3.上传本地服务器里的镜像到阿里云镜像仓库
+
+登录ACR里
+root@sanchuang:~# docker login --username=deyongfeng@sina.com registry.ap-southeast-1.aliyuncs.com
+
+i Info → A Personal Access Token (PAT) can be used instead.
+         To create a PAT, visit https://app.docker.com/settings
+         
+         
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/root/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+root@sanchuang:~# 
+
+root@sanchuang:~# docker images
+REPOSITORY                         TAG       IMAGE ID       CREATED        SIZE
+goweb                              1.2       cffb9b4dc7cb   16 hours ago   871MB
+goweb                              1.1       f13886ad63cb   17 hours ago   222MB
+goweb                              1.0       b138bf46cce6   17 hours ago   222MB
+scweb                              1.0       ed37dd24f20f   19 hours ago   159MB
+scnginx                            4.0       e84737c1a50b   21 hours ago   676MB
+scbusybox                          1.0       95537469f0a3   24 hours ago   4.27MB
+scnginx                            1.23.1    90981ddda254   2 days ago     190MB
+golang                             latest    29616a01ff27   9 days ago     853MB
+nginx                              latest    b52e0b094bc0   5 weeks ago    192MB
+docker.xuanyuan.me/library/mysql   latest    5568fddd4f66   7 weeks ago    797MB
+redis                              latest    43724892d6db   2 months ago   117MB
+busybox                            latest    31311c5853a2   5 months ago   4.27MB
+mysql                              5.7.35    8a8a506ccfdc   3 years ago    448MB
+centos                             7         eeb6ee3f44bd   3 years ago    204MB
+root@sanchuang:~# docker tag cffb9b4dc7cb  registry.ap-southeast-1.aliyuncs.com/califeng/goweb:1.2
+root@sanchuang:~# 
+root@sanchuang:~# docker images
+REPOSITORY                                            TAG       IMAGE ID       CREATED        SIZE
+goweb                                                 1.2       cffb9b4dc7cb   16 hours ago   871MB
+registry.ap-southeast-1.aliyuncs.com/califeng/goweb   1.2       cffb9b4dc7cb   16 hours ago   871MB
+上传镜像到ACR
+root@sanchuang:~# docker push registry.ap-southeast-1.aliyuncs.com/califeng/goweb:1.2
+The push refers to repository [registry.ap-southeast-1.aliyuncs.com/califeng/goweb]
+6b61ac78e3cc: Pushed 
+5f70bf18a086: Pushed 
+18f26f482b30: Pushed 
+e0f4cf0bdc48: Pushed 
+64b07af7c35d: Pushed 
+20a9b386e10e: Pushed 
+f8217d7865d2: Pushed 
+01c9a2a5f237: Pushed 
+1.2: digest: sha256:f60c5abfaa7b3be3a37111b251bdcd1562b936ac8c33d0c3ad3a6931549a48ce size: 2207
+root@sanchuang:~# 
+
+
+在另外的机器上下载
+还是需要先登录
+[root@nfs-dns-prom ~]#  docker login --username=deyongfeng@sina.com registry.ap-southeast-1.aliyuncs.com
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+再下载
+[root@nfs-dns-prom ~]# docker pull registry.ap-southeast-1.aliyuncs.com/califeng/goweb:1.2
+======
+
+
+192.168.1.131  /root/harbor-offline-installer-v2.1.0.tgz   
+
+====
+harbor 是存放镜像的仓库，公司内部可以使用自己的镜像
+https://goharbor.io/
+
+docker register 
+nexus
+=====
+启动10容器
+  nginx
+  python
+  redis
+  mysql
+  等
+====
+docker run
+
+docker compose  是在一台机器上进行容器编排的工具  --》导演
+    编排： 可以同时启动很多个容器，多个容器之间可以链接
+    编排文件： yaml文件--》里面定义了如何去启动很多容器，以及容器的参数，例如：镜像，卷，链接，网络等信息
+    docker-compose.yml  --》配置文件--》剧本
+
+
+
+docker swarm  ：是可以在多台机器上进行容器编排的工具 ---》集群容器编排工具
+
+k8s  kubernetes ： 是可以在多台机器上进行容器编排的工具 ---》集群容器编排工具
+
+====
+harbor的安装
+
+[root@docker go]# cat  /etc/centos-release 
+CentOS Stream release 10 (Coughlan)
+[root@docker go]#
+
+清除当前宿主机里的其他的docker容器
+[root@localhost ~]# docker rm  $(docker ps -a|tail -n +2 |awk '{print $NF}')
+
+
+1.提前条件是安装好docker和docker compose
+
+[root@docker go]# docker compose version
+Docker Compose version v5.0.1
+[root@docker go]# docker version
+Client: Docker Engine - Community
+ Version:           29.1.5
+ API version:       1.52
+ Go version:        go1.25.6
+ Git commit:        0e6fee6
+ Built:             Fri Jan 16 12:51:43 2026
+ OS/Arch:           linux/amd64
+ Context:           default
+
+Server: Docker Engine - Community
+ Engine:
+  Version:          29.1.5
+  API version:      1.52 (minimum version 1.44)
+  Go version:       go1.25.6
+  Git commit:       3b01d64
+  Built:            Fri Jan 16 12:48:23 2026
+  OS/Arch:          linux/amd64
+  Experimental:     false
+ containerd:
+  Version:          v2.2.1
+  GitCommit:        dea7da592f5d1d2b7755e3a161be07f43fad8f75
+ runc:
+  Version:          1.3.4
+  GitCommit:        v1.3.4-0-gd6d73eb8
+ docker-init:
+  Version:          0.19.0
+  GitCommit:        de40ad0
+[root@docker go]# 
+
+[root@docker go]# docker compose version
+Docker Compose version v5.0.1
+[root@docker go]# 
+
+2.下载harbor的源码
+
+https://github.com/goharbor/harbor/releases
+
+[root@docker go]# mkdir /harbor
+[root@docker go]# cd /harbor/
+[root@docker harbor]# 
+3.上传到linux服务器
+上传冯老师发的harbor软件包到linux系统
+
+[root@docker harbor]# rz -E
+rz waiting to receive.
+[root@docker harbor]# ls
+harbor-offline-installer-v2.10.3.tgz
+[root@docker harbor]# 
+
+
+解压
+[root@docker harbor]# tar xf harbor-offline-installer-v2.8.3.tgz 
+[root@docker harbor]# ls
+harbor  harbor-offline-installer-v2.8.3.tgz
+[root@docker harbor]# cd harbor
+[root@docker harbor]# ls
+common.sh  harbor.v2.8.3.tar.gz  harbor.yml.tmpl  install.sh  LICENSE  prepare
+[root@docker harbor]#
+
+生成安装需要的配置文件
+[root@docker harbor]# cp harbor.yml.tmpl harbor.yml
+
+[root@harbor harbor]# vim harbor.yml
+
+
+hostname: 192.168.203.128   #修改
+
+# http related config
+http:
+  # port for http, default is 80. If https enabled, this port will redirect to https port
+  port: 80   #修改
+
+#注释掉了https的配置
+#其他的配置没有修改
+# https related config
+#https:
+  # https port for harbor, default is 443
+#  port: 443
+  # The path of cert and key files for nginx
+#  certificate: /your/certificate/path
+#  private_key: /your/private/key/path
+
+如果harbor使用harbor.v2.8.3.tar.gz 高版本，可以直接执行安装脚本Install.sh  不需要考虑docker compose的版本问题，可以使用v2版本
+
+[root@docker harbor]# ./install.sh   执行安装脚本
+
+[Step 0]: checking if docker is installed ...
+
+Note: docker version: 24.0.7
+
+[Step 1]: checking docker-compose is installed ...
+
+Note: Docker Compose version v2.21.0
+
+[Step 2]: loading Harbor images ...
+
+
+Loaded image: goharbor/registry-photon:v2.8.3
+Loaded image: goharbor/notary-server-photon:v2.8.3
+Loaded image: goharbor/notary-signer-photon:v2.8.3
+Loaded image: goharbor/harbor-log:v2.8.3
+Loaded image: goharbor/redis-photon:v2.8.3
+Loaded image: goharbor/harbor-jobservice:v2.8.3
+Loaded image: goharbor/prepare:v2.8.3
+Loaded image: goharbor/harbor-core:v2.8.3
+Loaded image: goharbor/harbor-registryctl:v2.8.3
+Loaded image: goharbor/nginx-photon:v2.8.3
+Loaded image: goharbor/trivy-adapter-photon:v2.8.3
+Loaded image: goharbor/harbor-portal:v2.8.3
+Loaded image: goharbor/harbor-db:v2.8.3
+Loaded image: goharbor/harbor-exporter:v2.8.3
+
+
+[Step 3]: preparing environment ...
+
+[Step 4]: preparing harbor configs ...
+prepare base dir is set to /harbor/harbor
+WARNING:root:WARNING: HTTP protocol is insecure. Harbor will deprecate http protocol in the future. Please make sure to upgrade to https
+Generated configuration file: /config/portal/nginx.conf
+Generated configuration file: /config/log/logrotate.conf
+Generated configuration file: /config/log/rsyslog_docker.conf
+Generated configuration file: /config/nginx/nginx.conf
+Generated configuration file: /config/core/env
+Generated configuration file: /config/core/app.conf
+Generated configuration file: /config/registry/config.yml
+Generated configuration file: /config/registryctl/env
+Generated configuration file: /config/registryctl/config.yml
+Generated configuration file: /config/db/env
+Generated configuration file: /config/jobservice/env
+Generated configuration file: /config/jobservice/config.yml
+Generated and saved secret to file: /data/secret/keys/secretkey
+Successfully called func: create_root_cert
+Generated configuration file: /compose_location/docker-compose.yml
+Clean up the input dir
+
+
+Note: stopping existing Harbor instance ...
+
+
+[Step 5]: starting Harbor ...
+[+] Running 10/10
+ ✔ Network harbor_harbor        Created                                                                                 0.1s 
+ ✔ Container harbor-log         Started                                                                                 0.0s 
+ ✔ Container redis              Started                                                                                 0.1s 
+ ✔ Container harbor-db          Started                                                                                 0.1s 
+ ✔ Container registryctl        Started                                                                                 0.1s 
+ ✔ Container registry           Started                                                                                 0.1s 
+ ✔ Container harbor-portal      Started                                                                                 0.1s 
+ ✔ Container harbor-core        Started                                                                                 0.1s 
+ ✔ Container harbor-jobservice  Started                                                                                 0.1s 
+ ✔ Container nginx              Started                                                                                 0.1s 
+✔ ----Harbor has been installed and started successfully.----
+[root@docker harbor]# 
+查看harbor相关容器运行情况
+[root@docker harbor]# docker compose ps
+NAME                IMAGE                                COMMAND                                SERVICE       CREATED          STATUS                             PORTS
+harbor-core         goharbor/harbor-core:v2.8.3          "/harbor/entrypoint.sh"                core          23 seconds ago   Up 19 seconds (health: starting)   
+harbor-db           goharbor/harbor-db:v2.8.3            "/docker-entrypoint.sh  13"            postgresql    23 seconds ago   Up 20 seconds (health: starting)   
+harbor-jobservice   goharbor/harbor-jobservice:v2.8.3    "/harbor/entrypoint.sh"                jobservice    23 seconds ago   Up 15 seconds (health: starting)   
+harbor-log          goharbor/harbor-log:v2.8.3           "/bin/sh -c /usr/local/bin/start.sh"   log           24 seconds ago   Up 21 seconds (health: starting)   127.0.0.1:1514->10514/tcp
+harbor-portal       goharbor/harbor-portal:v2.8.3        "nginx -g 'daemon off;'"               portal        23 seconds ago   Up 20 seconds (health: starting)   
+nginx               goharbor/nginx-photon:v2.8.3         "nginx -g 'daemon off;'"               proxy         23 seconds ago   Up 18 seconds (health: starting)   0.0.0.0:80->8080/tcp, :::80->8080/tcp
+redis               goharbor/redis-photon:v2.8.3         "redis-server /etc/redis.conf"         redis         23 seconds ago   Up 20 seconds (health: starting)   
+registry            goharbor/registry-photon:v2.8.3      "/home/harbor/entrypoint.sh"           registry      23 seconds ago   Up 20 seconds (health: starting)   
+registryctl         goharbor/harbor-registryctl:v2.8.3   "/home/harbor/start.sh"                registryctl   23 seconds ago   Up 20 seconds (health: starting)   
+[root@docker harbor]# 
+
+在windows机器上访问网站，去配置harbor
+http://192.168.203.128/
+
+默认的登录的用户名和密码
+admin
+Harbor12345
+=====
+在harbor里创建一个项目sc
+并且新建一个用户 feng  密码是Admin@123
+liu  Admin@123
+授权sc这个项目允许feng这个用户去访问，授予项目管理员权限
+
+===
+使用新用户登录，再去创建一个专属这个新用户的项目也是可以的。
+并且新建一个用户 liu  密码是Admin@123
+
+
+
+四、本机上传拉取镜像
+在另外一台docker宿主机上使用这个仓库
+[root@localhost harbor]# cd  /etc/docker/
+[root@localhost docker]# ls
+daemon.json 
+[root@localhost docker]# 
+daemon.json 是给dockerd传递的参数，告诉dockerd可以有哪些仓库可以去使用，去下载镜像
+默认去registry.docker.io 这个仓库去下载镜像
+
+[root@docker1 ~]# cat /etc/docker/daemon.json
+{
+    "registry-mirrors": ["https://docker.xuanyuan.me","https://docker.1panel.live"],
+    "insecure-registries": ["http://192.168.100.128:80"]
+
+}
+
+
+[root@docker1 ~]#
+然后重启docker
+[root@docker1 ~]# systemctl daemon-reload
+[root@docker1 ~]# systemctl restart docker
+[root@docker1 ~]#
+启动harbor相关的容器
+[root@localhost docker]# cd  /harbor/harbor
+[root@localhost harbor]# ls
+common     docker-compose.yml     harbor.yml       install.sh  prepare
+common.sh  harbor.v2.10.3.tar.gz  harbor.yml.tmpl  LICENSE
+[root@localhost harbor]# docker compose restart
+root@sanchuang:/harbor/harbor# docker compose restart
+
+
+[root@localhost harbor]# docker compose ps
+WARN[0000] /harbor/harbor/docker-compose.yml: the attribute `version` is obsolete, it will be ignored, please remove it to avoid potential confusion 
+NAME                IMAGE                                 COMMAND                  SERVICE       CREATED          STATUS                    PORTS
+harbor-core         goharbor/harbor-core:v2.10.3          "/harbor/entrypoint.…"   core          14 minutes ago   Up 41 seconds (healthy)   
+harbor-db           goharbor/harbor-db:v2.10.3            "/docker-entrypoint.…"   postgresql    14 minutes ago   Up 41 seconds (healthy)   
+harbor-jobservice   goharbor/harbor-jobservice:v2.10.3    "/harbor/entrypoint.…"   jobservice    14 minutes ago   Up 39 seconds (healthy)   
+harbor-log          goharbor/harbor-log:v2.10.3           "/bin/sh -c /usr/loc…"   log           14 minutes ago   Up 31 seconds (healthy)   127.0.0.1:1514->10514/tcp
+harbor-portal       goharbor/harbor-portal:v2.10.3        "nginx -g 'daemon of…"   portal        14 minutes ago   Up 41 seconds (healthy)   
+nginx               goharbor/nginx-photon:v2.10.3         "nginx -g 'daemon of…"   proxy         14 minutes ago   Up 41 seconds (healthy)   0.0.0.0:80->8080/tcp, [::]:80->8080/tcp
+redis               goharbor/redis-photon:v2.10.3         "redis-server /etc/r…"   redis         14 minutes ago   Up 41 seconds (healthy)   
+registry            goharbor/registry-photon:v2.10.3      "/home/harbor/entryp…"   registry      14 minutes ago   Up 41 seconds (healthy)   
+registryctl         goharbor/harbor-registryctl:v2.10.3   "/home/harbor/start.…"   registryctl   14 minutes ago   Up 41 seconds (healthy)   
+[root@localhost harbor]# 
+===
+在ubuntu服务器上安装了docker，也配置了harbor仓库的地址
+
+[root@nfs iptables]# cd  /etc/docker/
+[root@nfs docker]# ls
+[root@nfs docker]# vim daemon.json
+{
+    "registry-mirrors": ["https://docker.xuanyuan.me","https://docker.1panel.live"],
+    "insecure-registries": ["http://192.168.100.128:80"]
+
+}
+
+[root@nfs docker]# systemctl daemon-reload
+[root@nfs docker]# systemctl restart docker
+[root@nfs docker]# 
+
+===
+其他电脑使用私有仓库的，都要修改
+root@sanchuang:~# cd /etc/docker/
+root@sanchuang:/etc/docker# ls
+daemon.json
+root@sanchuang:/etc/docker# vim daemon.json 
+root@sanchuang:/etc/docker# cat daemon.json 
+{
+    "registry-mirrors": ["https://docker.xuanyuan.me","https://docker.1panel.live"],
+    "insecure-registries" : ["192.168.203.128:80"]
+}
+root@sanchuang:/etc/docker# 
+root@sanchuang:/etc/docker# systemctl daemon-reload
+root@sanchuang:/etc/docker# systemctl restart docker
+
+===
+在原来安装harbor的宿主机上，重新启动harbor相关的容器
+[root@docker harbor]# cd /harbor/harbor
+[root@docker harbor]# docker compose up -d
+[+] Running 9/9
+ ✔ Container harbor-log         Running                                                                                 0.0s 
+ ✔ Container redis              Started                                                                                 0.0s 
+ ✔ Container registry           Started                                                                                 0.0s 
+ ✔ Container harbor-portal      Started                                                                                 0.0s 
+ ✔ Container registryctl        Started                                                                                 0.0s 
+ ✔ Container harbor-db          Started                                                                                 0.0s 
+ ✔ Container harbor-core        Started                                                                                 0.0s 
+ ✔ Container nginx              Started                                                                                 0.0s 
+ ✔ Container harbor-jobservice  Started                                                                                 0.0s 
+[root@docker harbor]# 
+
+root@sanchuang:/harbor/harbor# docker compose down   删除容器
+
+root@sanchuang:/harbor/harbor# docker compose up -d  创建并且启动容器  
+root@sanchuang:/harbor/harbor# docker compose restart  重启容器
+
+
+2、修改镜像的名字
+[root@docker docker]# docker tag hnweb:1.0 192.168.203.128:80/sanchuang/hnweb:1.0
+[root@docker docker]# docker images
+REPOSITORY                           TAG            IMAGE ID       CREATED         SIZE
+sc_sayhello                          1.1            0e57a73efe73   25 hours ago    1.01GB
+sc_sayhello                          1.0            1c58385cbc65   25 hours ago    1.01GB
+192.168.203.128:80/sanchuang/hnweb   1.0            53ced825c34b   28 hours ago    216MB
+hnweb                                1.0            53ced825c34b   28 hours ago    216MB
+
+=====
+root@sanchuang:/harbor/harbor# docker tag goweb:1.2 192.168.100.133:80/sanchuang/goweb:1.2
+root@sanchuang:/harbor/harbor# 
+
+本机上传
+首先登陆私有仓库
+
+chen  Sc@123456
+
+
+登录使用feng这个用户，密码是Sc123456
+root@sanchuang:/harbor/harbor# docker login  192.168.100.133:80
+Username: chen
+
+i Info → A Personal Access Token (PAT) can be used instead.
+         To create a PAT, visit https://app.docker.com/settings
+         
+         
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/root/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+root@sanchuang:/harbor/harbor# 
+
+
+遇到的问题，客户端不能push镜像到harbor，暂时没有解决。
+已经解决：问题是cicd这个项目是admin用户创建的，feng这个用户不能上传镜像到这个里面，需要feng这个用户自己去新建一个项目，然后上传。
+需要思考： feng这个用户是否对sanchuang项目有上传镜像的权限
+
+
+在ubuntu机器上login，然后tag镜像改名，再push到harbor服务器里
+添加harbor服务器的地址
+root@sc:~/liu# vim /etc/docker/daemon.json 
+{
+  "registry-mirrors": ["https://hub.docker-alhk.dkdun.com/"],
+  "insecure-registries" : ["192.168.205.137:80"]
+}
+
+root@sc:~/liu# systemctl daemon-reload
+root@sc:~/liu# systemctl restart docker
+
+登录
+
+[root@localhost harbor]# docker login 192.168.100.128:80
+Username: feng
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/root/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+给镜像打标签
+root@sc:/etc/docker# docker tag  nginx:latest   192.168.100.128:80/sc/nginx:latest
+
+root@sc:/etc/docker# docker images
+                                                                             i Info →   U  In Use
+IMAGE                                            ID             DISK USAGE   CONTENT SIZE   EXTRA
+192.168.100.128:80/sc/nginx:latest               127262f8c4c7        273MB           71MB    U   
+busybox:latest                                   f173c44fab35       6.89MB         1.27MB        
+mysql:8.4.6                                      7c6a49430969       1.07GB          237MB    U   
+nginx:latest                                     127262f8c4c7        273MB           71MB 
+
+上传镜像
+root@sc:/etc/docker# docker push  192.168.100.128:80/sc/nginx:latest
+The push refers to repository [192.168.100.128:80/sc/nginx]
+03de31afb035: Pushed 
+0f17be8dcff2: Pushed 
+14b7e5e8f394: Pushed 
+2a0cb278fd9f: Pushed 
+7045d6c32ae2: Pushed 
+e4fff0779e6d: Pushed 
+23fa5a7b99a6: Pushed 
+latest: digest: sha256:127262f8c4c716652d0e7863bba3b8c45bc9214a57d13786c854272102f7c945 size: 1778
+root@sc:/etc/docker# 
+
+====
+[root@docker harbor]# docker login  192.168.100.128:80
+Username: feng
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/root/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+[root@docker harbor]#
+
+[root@docker harbor]# docker tag  goweb:1.0 192.168.100.128:80/sc/goweb:1.0
+[root@docker harbor]# 
+
+root@sc:~/liu# docker images
+REPOSITORY                                            TAG       IMAGE ID       CREATED             SIZE
+liuapp                                                1.0       3d03784b9c0c   About an hour ago   71.7MB
+192.168.205.137:80/sanchuang/myapp                    1.0       2ba278e9c4a1   6 hours ago         161MB
+myapp                                                 1.0       2ba278e9c4a1   6 hours ago         161MB
+registry.ap-southeast-1.aliyuncs.com/califeng/myapp   1.0       2ba278e9c4a1   6 hours ago         161MB
+nginx                                                 latest    bc649bab30d1   9 months ago        187MB
+mysql                                                 5.7.41    0018a8d83892   16 months ago       455MB
+registry.cn-hangzhou.aliyuncs.com/fengdy/mysql        5.7.41    0018a8d83892   16 months ago       455MB
+root@sc:~/liu# 
+
+上传镜像
+
+[root@docker harbor]# docker push 192.168.100.128:80/sc/goweb:1.0
+The push refers to repository [192.168.100.128:80/sc/goweb]
+1d6f1fc64f5f: Pushed 
+81e5a77e6631: Pushed 
+aee1767db0dd: Pushed 
+632b11d85c4b: Pushed 
+1.0: digest: sha256:8544a5f2e938ea50792a41a5ac1addb3b745d3a4d83bf77402b55e3cc896bd02 size: 855
+[root@docker harbor]# 
+
+===
+在ubuntu系统里拉取镜像
+
+
+root@sc:/etc/docker# docker pull 192.168.100.128:80/sc/goweb:1.0
+1.0: Pulling from sc/goweb
+81e5a77e6631: Pull complete 
+632b11d85c4b: Pull complete 
+aee1767db0dd: Pull complete 
+1d6f1fc64f5f: Download complete 
+Digest: sha256:8544a5f2e938ea50792a41a5ac1addb3b745d3a4d83bf77402b55e3cc896bd02
+Status: Downloaded newer image for 192.168.100.128:80/sc/goweb:1.0
+192.168.100.128:80/sc/goweb:1.0
+root@sc:/etc/docker# 
+
+====
+root@sanchuang:/etc/docker# docker login 192.168.100.160:80
+Username: feng
+Password: 
+
+WARNING! Your credentials are stored unencrypted in '/root/.docker/config.json'.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/go/credential-store/
+
+Login Succeeded
+root@sanchuang:/etc/docker# docker pull 192.168.100.160:80/sc/scnginx:1.0
+1.0: Pulling from sc/scnginx
+446f83f14b23: Pull complete 
+3c0d6e0e7830: Pull complete 
+48a171c4a232: Pull complete 
+9fdcd2af4e7c: Pull complete 
+Digest: sha256:790d49e1913ef72b30bfe4712aba9bf8862604fa8453642fd62d70eeffdb7f5f
+Status: Downloaded newer image for 192.168.100.160:80/sc/scnginx:1.0
+192.168.100.160:80/sc/scnginx:1.0
+root@sanchuang:/etc/docker# docker images
+REPOSITORY                      TAG       IMAGE ID       CREATED         SIZE
+192.168.100.160:80/sc/scnginx   1.0       8be536b2757b   2 hours ago     444MB
+redis                           latest    f1285ef3611d   3 weeks ago     137MB
+nginx                           latest    41f689c20910   4 weeks ago     192MB
+busybox                         latest    0ed463b26dae   11 months ago   4.43MB
+mysql                           5.7.41    3f3447deacaa   2 years ago     455MB
+将下载的镜像的名字改短些
+root@sanchuang:/etc/docker# docker tag 192.168.100.160:80/sc/scnginx:1.0 scnginx:1.0
+root@sanchuang:/etc/docker# docker images
+REPOSITORY                      TAG       IMAGE ID       CREATED         SIZE
+192.168.100.160:80/sc/scnginx   1.0       8be536b2757b   2 hours ago     444MB
+scnginx                         1.0       8be536b2757b   2 hours ago     444MB
+redis                           latest    f1285ef3611d   3 weeks ago     137MB
+nginx                           latest    41f689c20910   4 weeks ago     192MB
+busybox                         latest    0ed463b26dae   11 months ago   4.43MB
+mysql                           5.7.41    3f3447deacaa   2 years ago     455MB
+root@sanchuang:/etc/docker# 
+====
+
+
+可以把本机里的myapp镜像都删除，再去下载也是可以的
+
+root@sc:~/liu# docker pull 192.168.205.137:80/sanchuang/myapp:1.0
+1.0: Pulling from sanchuang/myapp
+123275d6e508: Pull complete 
+dd1cd6637523: Pull complete 
+0c4e6d630f2c: Pull complete 
+13e9cd8f0ea1: Pull complete 
+4ffad7d20d15: Pull complete 
+3bb68fe71d82: Pull complete 
+c9e6eb35af36: Pull complete 
+7bd723c4c489: Pull complete 
+Digest: sha256:54108f02d38d6fd2f2f7748d7b49ec6d191450fa9f8d1f99fbbbefd282f3a1c2
+Status: Downloaded newer image for 192.168.205.137:80/sanchuang/myapp:1.0
+192.168.205.137:80/sanchuang/myapp:1.0
+root@sc:~/liu# 
+====
+问题：
+  1.daemon.json问题
+  2.重启docker服务问题导致harbor部分容器启动不了
+        docker  compose  restart 解决
+cd  /harbor/harbor
+
+docker  compose  stop
+docker  compose  start
+
+  3.Ubuntu 系统里登录
+      sudo  docker login
+  4.删除harbor容器的同时删除卷
+      docker compose rm -v
+      
+      彭雅琴---》简历 ---》docker  开发项目--》微服务
+      网站：  制作镜像---》部署---》数据库
+
+
+==============
+[root@docker docker]# docker push 192.168.203.128:80/sanchuang/hnweb:1.0
+The push refers to repository [192.168.203.128:80/sanchuang/hnweb]
+f50301d7aa4e: Pushed 
+090ea53a012e: Pushed 
+83235dfabd49: Pushed 
+174f56854903: Pushed 
+1.0: digest: sha256:c644bd876c7f2cb68cdfb316919f927d2e4edcee8403c81d53856fe110194289 size: 1153
+[root@docker docker]# 
+
+[root@docker docker]# docker tag scbusybox:1.0 192.168.203.128:80/sanchuang/scbusybox:1.0
+[root@docker docker]# docker push 192.168.203.128:80/sanchuang/scbusybox:1.0
+The push refers to repository [192.168.203.128:80/sanchuang/scbusybox]
+0c7f4933b9dd: Pushed 
+355ee03af350: Pushed 
+82ae998286b2: Pushed 
+1.0: digest: sha256:56238a2c8bd08c19d547c6abd64831c0dfdf9ad1a803879fe13dcdc344cacd3c size: 942
+[root@docker docker]# 
+
+弄一个新的ubuntu的镜像
+[root@docker docker]# docker tag alpine:latest  192.168.203.128:80/sanchuang/alpine:latest
+[root@docker docker]# docker push 192.168.203.128:80/sanchuang/alpine:latest
+The push refers to repository [192.168.203.128:80/sanchuang/alpine]
+8d3ac3489996: Pushed 
+latest: digest: sha256:e7d88de73db3d3fd9b2d63aa7f447a10fd0220b7cbf39803c803f2af9ba256b3 size: 528
+[root@docker docker]# 
+
+在nfs服务器上去拉取镜像，需要先登录harbor仓库
+
+[root@nfs ~]# docker login  192.168.203.128:80
+Username: feng
+Password: 
+WARNING! Your password will be stored unencrypted in /root/.docker/config.json.
+Configure a credential helper to remove this warning. See
+https://docs.docker.com/engine/reference/commandline/login/#credentials-store
+
+Login Succeeded
+[root@nfs ~]# 
+
+[root@nfs ~]# docker pull  192.168.203.128:80/sanchuang/hnweb:1.0
+1.0: Pulling from sanchuang/hnweb
+2d473b07cdd5: Pull complete 
+3cfb4968cf2a: Pull complete 
+27561aa2a564: Pull complete 
+2001c077597d: Pull complete 
+Digest: sha256:c644bd876c7f2cb68cdfb316919f927d2e4edcee8403c81d53856fe110194289
+Status: Downloaded newer image for 192.168.203.128:80/sanchuang/hnweb:1.0
+192.168.203.128:80/sanchuang/hnweb:1.0
+[root@nfs ~]# docker images
+REPOSITORY                           TAG       IMAGE ID       CREATED        SIZE
+192.168.203.128:80/sanchuang/hnweb   1.0       53ced825c34b   28 hours ago   216MB
+[root@nfs ~]#
+
+
+

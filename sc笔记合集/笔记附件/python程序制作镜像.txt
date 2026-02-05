@@ -1,0 +1,184 @@
+案例2： python程序制作镜像（无数据库访问的）
+1.编写核心的程序代码app.py
+[root@docker busybox]# cd /myapp/
+[root@docker myapp]# ls
+busybox
+[root@docker myapp]# mkdir python
+[root@docker myapp]# cd python/
+[root@docker python]# 
+[root@docker python]# ls
+[root@docker python]# vim app.py
+[root@docker python]# vim app.py
+[root@docker python]# cat app.py 
+# 导入Flask核心类
+from flask import Flask
+
+# 初始化Flask应用实例，__name__代表当前模块名
+app = Flask(__name__)
+
+# 定义路由：匹配根目录（/）的GET请求
+@app.route('/')
+def hello_world():
+    # 视图函数：返回指定的字符串内容
+    return "hello,world,welcome to sanchuang"
+
+# 程序入口：只有直接运行该脚本时才启动服务
+if __name__ == '__main__':
+    # 启动Flask内置服务器，host=0.0.0.0允许外部访问，port指定端口为80
+    app.run(host='0.0.0.0', port=80, debug=False)
+
+
+验证代码app.py是否可以运行
+pip或者pip3 是python里的yum用来安装python里的库
+
+[root@docker python]# python3  app.py 
+Traceback (most recent call last):
+  File "/myapp/python/app.py", line 2, in <module>
+    from flask import Flask
+ModuleNotFoundError: No module named 'flask'
+
+[root@docker python]# python3 -m ensurepip --upgrade   安装pip3
+
+[root@docker python]# pip3  install flask  在python3里安装flask库
+
+
+
+2.创建解决依赖的文件，里面写明python代码运行依赖的库
+
+[root@docker python]# vim requirements.txt
+flask
+[root@docker python]#
+
+3.下载python3的基础镜像
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.9-slim
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/python:3.9-slim  docker.io/python:3.9-slim
+[root@docker python]# docker images
+                                                                                         i Info →   U  In Use
+IMAGE                                                        ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                                                33735bd63cf8       11.7MB         3.63MB        
+busybox:latest                                               ea6157971956       9.16MB         4.67MB        
+import-scnginx:1.0                                           93d595f9307e        268MB         70.6MB    U   
+mysql:8.4.6                                                  7c6a49430969       1.07GB          237MB    U   
+nginx:latest                                                 127262f8c4c7        270MB           71MB    U   
+python3.10:latest                                            9951e9cdb2a7        489MB          108MB    U   
+python3:3.10                                                 9951e9cdb2a7        489MB          108MB    U   
+python:3.9-slim                                              7b2231316373        187MB         47.3MB 
+
+[root@docker python]# vim Dockerfile
+FROM  python:3.9-slim 
+WORKDIR  /app
+ADD .   /app
+RUN  pip install   -r requirements.txt  -i https://mirrors.aliyun.com/pypi/simple/
+EXPOSE 80
+ENV NAME  sanchuang
+ENV AUTHOR  califeng
+CMD ["python","app.py"]
+
+
+[root@docker python]# 
+
+
+[root@docker python]# ls
+app.py  Dockerfile  requirements.txt
+[root@docker python]# 
+4.制作镜像
+[root@docker python]# ls
+app.py  Dockerfile  requirements.txt
+[root@docker python]# 
+
+[root@docker python]# docker build  -t scflask:1.0  .
+[+] Building 6.2s (9/9) FINISHED                                                              docker:default
+ => [internal] load build definition from Dockerfile                                                    0.0s
+ => => transferring dockerfile: 249B                                                                    0.0s
+ => WARN: LegacyKeyValueFormat: "ENV key=value" should be used instead of legacy "ENV key value" forma  0.0s
+ => WARN: LegacyKeyValueFormat: "ENV key=value" should be used instead of legacy "ENV key value" forma  0.0s
+ => [internal] load metadata for docker.io/library/python:3.9-slim                                      0.0s
+ => [internal] load .dockerignore                                                                       0.0s
+ => => transferring context: 2B                                                                         0.0s
+ => [1/4] FROM docker.io/library/python:3.9-slim@sha256:7b223131637329f41843207a9d1d63d1fc01b6564d3d2b  0.1s
+ => => resolve docker.io/library/python:3.9-slim@sha256:7b223131637329f41843207a9d1d63d1fc01b6564d3d2b  0.0s
+ => [internal] load build context                                                                       0.0s
+ => => transferring context: 885B                                                                       0.0s
+ => [2/4] WORKDIR  /app                                                                                 0.0s
+ => [3/4] ADD .   /app                                                                                  0.0s
+ => [4/4] RUN  pip install   -r requirements.txt  -i https://mirrors.aliyun.com/pypi/simple/            4.7s
+ => exporting to image                                                                                  1.2s 
+ => => exporting layers                                                                                 0.8s 
+ => => exporting manifest sha256:7325348d2ea517922fd95c4b38538c3495dca6cc7d543da17dbb48a946083787       0.0s 
+ => => exporting config sha256:04a03bfadf107a211893ce678f6f33ad5170d2439be677614d89648b9aaeeef0         0.0s 
+ => => exporting attestation manifest sha256:078e004cb486111cf5ab64b658e47202fb32144b3abbafaad068cf534  0.0s 
+ => => exporting manifest list sha256:cbdb74f06a22d471d6f2be2522456a9aed19d1f122d1c6704d47f691efde3c65  0.0s 
+ => => naming to docker.io/library/scflask:1.0                                                          0.0s
+ => => unpacking to docker.io/library/scflask:1.0                                                       0.3s
+
+ 2 warnings found (use docker --debug to expand):
+ - LegacyKeyValueFormat: "ENV key=value" should be used instead of legacy "ENV key value" format (line 6)
+ - LegacyKeyValueFormat: "ENV key=value" should be used instead of legacy "ENV key value" format (line 7)
+[root@docker python]# 
+
+
+[root@docker python]# cat Dockerfile 
+FROM  python:3.9-slim 
+WORKDIR  /app
+ADD .   /app
+RUN  pip install   -r requirements.txt  -i https://mirrors.aliyun.com/pypi/simple/
+EXPOSE 80
+ENV NAME=sanchuang
+ENV AUTHOR=califeng
+CMD ["python","app.py"]
+
+
+[root@docker python]# 
+
+[root@docker python]# docker build  -t scflask:1.1  .
+[+] Building 5.9s (9/9) FINISHED                                                              docker:default
+ => [internal] load build definition from Dockerfile                                                    0.0s
+ => => transferring dockerfile: 247B                                                                    0.0s
+ => [internal] load metadata for docker.io/library/python:3.9-slim                                      0.0s
+ => [internal] load .dockerignore                                                                       0.0s
+ => => transferring context: 2B                                                                         0.0s
+ => [1/4] FROM docker.io/library/python:3.9-slim@sha256:7b223131637329f41843207a9d1d63d1fc01b6564d3d2b  0.0s
+ => => resolve docker.io/library/python:3.9-slim@sha256:7b223131637329f41843207a9d1d63d1fc01b6564d3d2b  0.0s
+ => [internal] load build context                                                                       0.0s
+ => => transferring context: 308B                                                                       0.0s
+ => CACHED [2/4] WORKDIR  /app                                                                          0.0s
+ => [3/4] ADD .   /app                                                                                  0.0s
+ => [4/4] RUN  pip install   -r requirements.txt  -i https://mirrors.aliyun.com/pypi/simple/            4.5s
+ => exporting to image                                                                                  1.2s 
+ => => exporting layers                                                                                 0.7s 
+ => => exporting manifest sha256:57abfca02ff54c7c569996b6a56f2eb09b627ac57cae11f5ec9f91ccbd20beea       0.0s 
+ => => exporting config sha256:0b73ba0f70f989088b2724f635e0d6c531df9177a1b4d4fb1c879fe95e512c4b         0.0s 
+ => => exporting attestation manifest sha256:c4ca228a9624328f4f6dba28351d477ff91fc583bc914f6b6d2d81aa9  0.0s 
+ => => exporting manifest list sha256:3536c7446aa51ff6a451c919a54668306b306c87eb54b6ef55e9af27b5942fe6  0.0s 
+ => => naming to docker.io/library/scflask:1.1                                                          0.0s
+ => => unpacking to docker.io/library/scflask:1.1                                                       0.4s
+[root@docker python]# 
+
+
+[root@docker python]# docker images
+                                                                                         i Info →   U  In Use
+IMAGE                                                        ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                                                33735bd63cf8       11.7MB         3.63MB        
+busybox:latest                                               ea6157971956       9.16MB         4.67MB        
+import-scnginx:1.0                                           93d595f9307e        268MB         70.6MB    U   
+mysql:8.4.6                                                  7c6a49430969       1.07GB          237MB    U   
+nginx:latest                                                 127262f8c4c7        270MB           71MB    U   
+python3.10:latest                                            9951e9cdb2a7        489MB          108MB    U   
+python3:3.10                                                 9951e9cdb2a7        489MB          108MB    U   
+python:3.9-slim                                              7b2231316373        187MB         47.3MB        
+scbusybox:1.0                                                3cc5165fdf56       9.18MB         4.67MB        
+scbusybox:1.1                                                1de4c4b9da1f       9.18MB         4.67MB        
+scflask:1.0                                                  cbdb74f06a22        205MB           52MB        
+scflask:1.1                                                  3536c7446aa5        205MB           52MB   
+
+5.启动容器
+docker  run  -d  --name scflask-1  -p 5000:80  scflask:1.1
+
+[root@docker python]# docker  run  -d  --name scflask-1  -p 5000:80  scflask:1.1
+ad99b0e3fc0854d129b556c01fbb28e76c60fc197af5177770a8756508bb89dd
+[root@docker python]# docker ps
+CONTAINER ID   IMAGE          COMMAND                  CREATED          STATUS                    PORTS                                     NAMES
+ad99b0e3fc08   scflask:1.1    "python app.py"          5 seconds ago    Up 5 seconds              0.0.0.0:5000->80/tcp, [::]:5000->80/tcp   scflask-1
+
+6.访问容器
+http://192.168.100.128:5000/

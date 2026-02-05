@@ -1,0 +1,79 @@
+案例1： busybox+shell脚本（核心代码）
+[root@docker ~]# cat /etc/centos-release 
+CentOS Stream release 10 (Coughlan)
+[root@docker ~]# 
+
+[root@docker ~]# mkdir /myapp
+[root@docker ~]# cd /myapp/
+[root@docker myapp]# 
+
+[root@docker myapp]# mkdir  busybox
+[root@docker myapp]# cd busybox/
+[root@docker busybox]# 
+1.创建核心shell脚本--》核心代码
+[root@docker busybox]# vim while.sh
+#!/bin/sh
+
+i=1
+while true
+do
+        echo  "hello,world,welcome to sanchuang $i"
+        sleep  1
+        let i++
+done  
+2.创建Dockerfile文件
+[root@docker busybox]# vim Dockerfile
+
+FROM  busybox:latest
+WORKDIR  /
+COPY  .  /
+RUN  touch sc.txt && mkdir sanchuang && sleep 5
+ENTRYPOINT ["/bin/sh","/while.sh"]
+
+=========
+
+FROM  busybox:latest  #指定基础镜像
+WORKDIR  /  #指定进入容器内部会进入的目录---》家目录
+COPY  .  /  #复制宿主机当前目录下的所有的文件和文件夹到容器里的系统的根目录下
+RUN  touch sc.txt && mkdir sanchuang && sleep 5  #当我们制作镜像的时候，会启动一个临时的容器，在这个临时的容器里进行操作
+                                                  #只是在制作镜像的时候，基于基础镜像安装或者新建某些文件和文件夹等
+ENTRYPOINT ["/bin/sh","/while.sh"]  #指定镜像制作完成后，启动容器的时候运行的第1个命令  /bin/sh  /while.sh
+
+==========
+
+3.确认是否有busybox的基础镜像
+
+[root@docker busybox]# docker images
+                                                                                         i Info →   U  In Use
+IMAGE                                                        ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                                                33735bd63cf8       11.7MB         3.63MB        
+busybox:latest                                               ea6157971956       9.16MB         4.67MB              
+[root@docker busybox]# 
+
+4.制作镜像
+[root@docker busybox]# pwd
+/myapp/busybox
+[root@docker busybox]# ls
+Dockerfile  while.sh
+[root@docker busybox]#
+
+[root@docker busybox]# docker  build  -t scbusybox:1.0   .
+
+[root@docker busybox]# docker images
+                                                                                         i Info →   U  In Use
+IMAGE                                                        ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                                                33735bd63cf8       11.7MB         3.63MB        
+busybox:latest                                               ea6157971956       9.16MB         4.67MB        
+import-scnginx:1.0                                           93d595f9307e        268MB         70.6MB    U   
+mysql:8.4.6                                                  7c6a49430969       1.07GB          237MB    U   
+nginx:latest                                                 127262f8c4c7        270MB           71MB    U   
+scbusybox:1.0                                                3cc5165fdf56       9.18MB         4.67MB   
+5.启动容器
+docker  run  -it  --rm   --name  scbusybox-1  scbusybox:1.0
+
+
+[root@docker busybox]# docker  run  -it  --rm   --name  scbusybox-1  scbusybox:1.0
+hello,world,welcome to sanchuang 1
+hello,world,welcome to sanchuang 2
+hello,world,welcome to sanchuang 3
+hello,world,welcome to sanchuang 4
