@@ -1,0 +1,78 @@
+这个部署只有两台机器，一台centos 10，一台ubantu24.04.   centos为NFS服务的主机
+
+1.在centos上安装nfs的软件包
+yum install -y nfs-utils
+
+2.启动服务并开机自启动
+systemctl start nfs-server
+systemctl enable nfs-server
+
+3.检查rpcbind的进程有无启动
+
+4.检查nfs服务进程有无启动
+
+5.创建共享目录并放入数据
+[root@nfs-server ~]# mkdir /web
+[root@nfs-server ~]# cd /web
+建议大家上传昨天的feng.jpg和index.html网页
+
+[root@docker web]# ls
+feng.jpg  index.html
+
+6.修改NFS的配置文件
+
+# 格式：共享目录  允许访问的客户端(权限参数)
+/data/nfs_share  192.168.1.0/24(rw,sync,no_root_squash,no_subtree_check)
+
+/web 共享的目录的路径
+192.168.1.0/24 允许能访问的机器的网段
+(rw,sync,all_squash) 为拥有的权限  
+   rw 可以读写                                                            
+   sync 同步：客户端向 NFS 写入数据时，必须等待数据同步写入 NFS 服务器的磁盘后，才返回 “写入成功” 的结果                                                          
+   async  异步： 客户端写入数据时，NFS 服务器先将数据写入内存缓存，就返回 “写入成功”，之后再异步刷到磁盘
+
+   all_squash 任何机器上的任何用户（不管是root还是普通用户）远程连接到nfs服务器都被看成一个普通用户nobody（组一般是nogroup）对待
+
+ 7.重启nfs-server服务
+ systemctl restart nfs-server 重启nfs-server服务
+
+ 8.设置共享目录的权限
+ chown  nobody:nobody /web
+
+ 9。关闭防火墙
+ service firewalld stop
+
+ systemctl status firewalld
+
+
+
+ -------------------------------
+ 切换到ubantu
+
+ 1.安装软件
+
+[root@sc-docker2 /]#apt  install nfs-kernel-server -y
+
+2.新建挂载目录，然后挂载到NFS主机的共享目录上
+
+root@sc:~# mkdir /nfs-web
+root@sc:~# mount  192.168.100.128:/web  /nfs-web/  ---》只是为测试，客户机可以使用nfs共享的目录
+root@sc:~# 
+root@sc:~# df -Th|grep nfs   ##查看目录的挂载点
+192.168.100.128:/web              nfs4      62G  6.9G   55G  12% /nfs-web    ##这样就是成功
+
+root@sc:/nfs-web# ls   ##再查看目录就可以看到centos共享的文件
+feng.jpg  index.html  
+
+-----------------------------------
+1.在centos 10和Ubuntu 24.04上都创建卷nfs-web，挂载到nfs主机的共享目录
+（两台机器都执行）
+docker volume create --driver local --opt type=nfs  --opt  o=addr=192.168.100.128,nolock,soft,rw,sync --opt  device=:/web   nfs-web##这里要填NFS主机的IP
+
+2.两台机器上都启动容器并使用nfs-web卷
+docker run -d -p 8058:80  -v nfs-web:/usr/share/nginx/html --name nfs-nginx-1  nginx
+
+3.访问测试
+http://192.168.100.129:8058
+http://192.168.100.128:8058
+（填自己的IP，端口填自己设置的）

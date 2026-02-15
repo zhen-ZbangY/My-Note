@@ -1,0 +1,637 @@
+
+容器监控
+监控：  monitor 
+
+监控的意义？
+    提前发现问题，将问题消灭在萌芽状态--》防止重大事故的发生
+
+
+监控什么东西？
+
+  容器的使用情况--》消耗了多少cpu、内存、磁盘IO、网络IO等情况  --》docker  stats
+  运行容器的宿主机的cpu、内存、磁盘IO、网络IO等情况 --->得到数据
+
+    top
+
+
+  监控进程是否正在运行
+
+Prometheus  是监控软件
+
+top
+free 
+
+任何公司都要监控部门--》运维部门的事情
+[root@scdocker harbor]# yum install epel-release -y
+
+[root@scdocker harbor]# yum install dstat  glances -y
+全能的命令：   dstat   glances
+root@sc:~# apt install glances
+
+
+[root@scdocker harbor]# dstat -am
+----total-cpu-usage---- -dsk/total- -net/total- ---paging-- ---system-- ------memory-usage-----
+usr sys idl wai hiq siq| read  writ| recv  send|  in   out | int   csw | used  buff  cach  free
+  1   1  98   0   0   0| 111k  383k|   0     0 |   2B    4B| 629   822 | 837M 1304k 2386M  546M
+  0   0 100   0   0   0|   0     0 |  24k   25k|   0     0 | 220   302 | 837M 1304k 2386M  546M
+  0   0 100   0   0   0|   0     0 |  31k   31k|   0     0 | 265   374 | 837M 1304k 2386M  546M
+  0   0 100   0   0   0|   0     0 |3268B 3634B|   0     0 | 216   270 | 837M 1304k 2386M  546M
+  0   0  99   0   0   0|   0    56k|4313B 4649B|   0     0 | 386   493 | 837M 1304k 2386M  546M^C
+[root@scdocker harbor]# 
+[root@scdocker harbor]# glances 
+
+===============
+[root@nfs iptables]# docker  stats
+CONTAINER ID   NAME         CPU %     MEM USAGE / LIMIT     MEM %     NET I/O          BLOCK I/O         PIDS
+f2aa6fa08574   wang-web-1   0.00%     6.012MiB / 1.777GiB   0.33%     3.93kB / 2.3kB   52.1MB / 20.5kB   2
+
+
+ BLOCK 块 --》磁盘属于块设备，用来存放数据
+
+监控： 在用工具
+
+https://prometheus.io/
+普罗米修斯： 希腊神话里的一个神--》偷了火种给人类
+
+grafana -->根据Prometheus提供的数据展示图形--》出图工具
+
+云原生：  k8s、docker、containerd、Prometheus  --》go
+open source metrics and monitoring for your systems and services
+metrics 指标： cpu的使用率、内存使用率等
+
+Monitor your applications, systems, and services with the leading open source monitoring solution. Instrument, collect, store, and query your metrics for alerting, dashboarding, and other use cases.
+Prometheus collects and stores its metrics as time series data
+Prometheus joined the Cloud Native Computing Foundation  in 2016 as the second hosted project, after Kubernetes
+Prometheus 是一个监控软件（开源），是云原生计算基金会的第2个项目，也是一个时序数据库
+
+
+健康： 指标  --》某些关键的性能参数
+        血压、血脂、血糖
+=====
+休息20分钟
+15:50上课
+
+Advisor
+Prometheus
+grafana
+
+
+cAdvisor (Container Advisor) provides container users an understanding of the resource usage and performance characteristics of their running containers. It is a running daemon that collects, aggregates, processes, and exports information about running containers.
+
+[root@scdocker ~]# mkdir /monitor
+[root@scdocker ~]# cd /monitor/
+[root@scdocker monitor]# ls
+去QQ群里下载cadvisor.tar，然后上传cadvisor.tar到你的linux 宿主机
+[root@scdocker monitor]# ls
+cadvisor.tar
+[root@scdocker monitor]# 
+[root@scdocker monitor]# docker load  -i cadvisor.tar 
+ace0eda3e3be: Loading layer [==================================================>]  5.843MB/5.843MB
+33bb68b99ee4: Loading layer [==================================================>]  102.4MB/102.4MB
+d3174d703c76: Loading layer [==================================================>]  13.25MB/13.25MB
+8b7599e512b6: Loading layer [==================================================>]  44.19MB/44.19MB
+Loaded image: gcr.io/cadvisor/cadvisor:latest
+[root@scdocker monitor]# 
+
+What is Prometheus?
+Prometheus is an open-source systems monitoring and alerting toolkit originally built at SoundCloud. 
+Prometheus joined the Cloud Native Computing Foundation in 2016 as the second hosted project, after Kubernetes.
+
+
+ Cloud Native Computing Foundation --》云原生计算基金会： Prometheus、kubernets、ETCD
+
+node 节点
+ssd  固态磁盘（硬盘）--》芯片保存数据  --》速度快
+hdd  机械磁盘（硬盘）--》磁性物质去保存数据--》机械运动 --》速度慢
+
+
+metrics 指标：  cpu，内存，网络信息 等信息
+Prometheus的核心组件
+1. Prometheus server：  http server、tsdb、retrieval
+2. Prometheus targets：  exporter  ：安装被监控机器上的，是一个采集数据的程序
+              木马、间谍
+              mysqld_exporter： 获取mysql数据库的信息
+              node_exporter：获取服务器节点的cpu、内存、磁盘io、网络IO的数据--》常规数据
+3.数据可视化： Prometheus web UI  、grafana
+        user  interface 用户接口        
+4.告警： altermanager  通知用户的，根据某个指标的阈值，发通知告诉运维人员
+  alter 告警信息
+5.pushgateway  ：中间件，替其他的短作业的程序保留数据，Prometheus server到pushgateway里获取数据--》中间存放数据的软件
+
+Components
+The Prometheus ecosystem consists of multiple components, many of which are optional:
+
+1.the main Prometheus server which scrapes and stores time series data   --》时序数据库
+client libraries for instrumenting application code
+2.a push gateway for supporting short-lived jobs  --》临时存放数据的地方（软件）
+3.special-purpose exporters for services like HAProxy, StatsD, Graphite, etc.   代理软件exporter 
+4.an alertmanager to handle alerts  --》告警工具--》报警工具
+various support tools
+=====
+
+使用容器去安装Prometheus
+1.拉取镜像--》到渡渡鸟上下载
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/prom/prometheus:v3.9.1
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/prom/prometheus:v3.9.1  docker.io/prom/prometheus:v3.9.1
+
+
+[root@docker harbor]# docker images|grep prom
+WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+prom/prometheus:v3.9.1                                                          2024d7bdfc55        502MB          134MB        
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/prom/prometheus:v3.9.1       2024d7bdfc55        502MB          134MB        
+[root@docker harbor]# 
+
+docker load  -i  prometheus.tar
+docker load  -i  prometheus.latest.tar
+
+# 使用你环境里看起来能用的加速器拉取
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/prom/prometheus:latest
+
+# 拉取成功后，为了方便使用，给它打个短标签
+docker tag swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/prom/prometheus:latest prom/prometheus:latest
+
+
+2.启动
+
+[root@docker harbor]# docker run -d  -p9090:9090 --name sc-prom-1  prom/prometheus:v3.9.1
+或者
+[root@docker ~]# docker  run -d   -p9090:9090  --name sc-prom-1  prom/prometheus
+368a0ec6902745458cde52529934f52084bd20d841aea4ede835527555d3b40b
+[root@docker ~]# docker ps
+CONTAINER ID   IMAGE             COMMAND                   CREATED         STATUS        PORTS                                       NAMES
+368a0ec69027   prom/prometheus   "/bin/prometheus --c…"   2 seconds ago   Up 1 second   0.0.0.0:9090->9090/tcp, :::9090->9090/tcp   sc-prom-1
+[root@docker ~]#
+
+3.登录Prometheus的web界面
+访问宿主机的ip对应的9090端口
+http://192.168.100.128:9090/
+
+4.得到Prometheus的主配置文件，从容器里直接拷贝出来
+[root@docker harbor]# mkdir /prom
+[root@docker harbor]# cd /prom
+[root@docker prom]# ls
+[root@docker prom]# 
+[root@docker prom]# docker cp sc-prom-1:/etc/prometheus/prometheus.yml  .
+Successfully copied 3.07kB to /prom/.
+[root@docker prom]# ls
+prometheus.yml
+[root@docker prom]# 
+
+同步时间
+[root@docker prom]# date
+2023年 03月 23日 星期四 11:05:11 CST
+ntpdate命令是用来和互联网上的时间服务器同步时间的
+network time protocol  网络时间协议
+
+
+root@sanchuang:~# timedatectl set-timezone Asia/Shanghai
+root@sanchuang:/monitor# date -s  "2028-10-1 19:00"   修改时间
+
+
+
+为什么需要配置文件prometheus.yml？
+		我们需要修改主配置文件，添加需要监控的主机？
+
+
+Prometheus监控容器需要使用一个软件cAdvisor
+cAdvisor (short for container Advisor) analyzes and exposes resource usage and performance data from running containers.
+
+官方网址：
+https://prometheus.io/docs/guides/cadvisor/#monitoring-docker-container-metrics-using-cadvisor
+
+安装部署cAdvisor+Prometheus
+
+1.编辑Prometheus.yml主配置文件，添加监控的容器cAdvisor为目标容器
+[root@docker prom]# cat prometheus.yml |egrep -v "#|^$"
+global:
+alerting:
+  alertmanagers:
+    - static_configs:
+        - targets:
+rule_files:
+scrape_configs:
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+  - job_name: cadvisor
+    scrape_interval: 5s
+    static_configs:
+      - targets:
+        - cadvisor:8080
+[root@docker prom]# 
+============
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["localhost:9090"]
+        labels:
+          app: "prometheus"
+  - job_name: "cadvisor"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["cadvisor:8080"]
+        labels:
+          app: "cadvisor"
+
+
+2.使用docker compose去启动Prometheus ，cadvisor ，redis容器
+    需要你的机器里已经安装了docker compose
+    [root@docker prom]# which docker-compose  查询是否有docker-compose
+    /usr/bin/docker-compose
+    [root@docker prom]#
+
+    2.1 新建一个docker-compose.yml文件
+[root@docker prom]# vim docker-compose.yml
+version: '3.2'
+services:
+  prometheus:
+    image: prom/prometheus:v3.9.1
+    container_name: prometheus
+    ports:
+    - 9090:9090
+    command:
+    - --config.file=/etc/prometheus/prometheus.yml
+    volumes:
+    - ./prometheus.yml:/etc/prometheus/prometheus.yml:ro
+    depends_on:
+    - cadvisor
+  cadvisor:
+    image: ghcr.io/google/cadvisor:0.56.2
+    container_name: cadvisor
+    ports:
+    - 8080:8080
+    volumes:
+    - /:/rootfs:ro
+    - /var/run:/var/run:rw
+    - /sys:/sys:ro
+    - /var/lib/docker/:/var/lib/docker:ro
+    depends_on:
+    - redis
+  redis:
+    image: redis:latest
+    container_name: redis
+    ports:
+    - 6379:6379
+
+
+2.2 上传cadvisor.tar镜像到宿主机，然后导入镜像，这个镜像需要冯老师提供，因为到google云去下载gcr.io/cadvisor/cadvisor:latest  但是国内不能访问google云
+
+到渡渡鸟里下载cadvisor镜像
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/cadvisor/cadvisor:latest
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/gcr.io/cadvisor/cadvisor:latest  gcr.io/cadvisor/cadvisor:latest
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/ghcr.io/google/cadvisor:0.56.2
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/ghcr.io/google/cadvisor:0.56.2  ghcr.io/google/cadvisor:0.56.2
+
+
+
+查看redis镜像是否存在
+[root@docker prom]# docker images|grep redis:latest
+WARNING: This output is designed for human readability. For machine-readable output, please use --format.
+redis:latest                                                                    00d8139cc831        172MB         45.9MB   U    
+swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis:latest                 00d8139cc831        172MB         45.9MB   U    
+[root@docker prom]# 
+
+
+3.启动docker compose
+
+[root@docker prom]# ls
+docker-compose.yml  prometheus.yml
+[root@docker prom]# 
+
+[root@docker prom]# docker compose  up  -d  创建容器并且启动
+[+] Running 4/4
+ ⠿ Network prom_default  Created                                                                                                0.1s
+ ⠿ Container redis       Started                                                                                                1.3s
+ ⠿ Container cadvisor    Started                                                                                                2.1s
+ ⠿ Container prometheus  Started                                                                                                3.5s
+[root@docker prom]# docker compose ps  查看容器运行
+NAME         IMAGE                            COMMAND                  SERVICE      CREATED         STATUS                            PORTS
+cadvisor     ghcr.io/google/cadvisor:0.56.2   "/usr/bin/entrypoint…"   cadvisor     5 seconds ago   Up 4 seconds (health: starting)   0.0.0.0:8080->8080/tcp, [::]:8080->8080/tcp
+prometheus   prom/prometheus:v3.9.1           "/bin/prometheus --c…"   prometheus   5 seconds ago   Up 4 seconds                      0.0.0.0:9090->9090/tcp, [::]:9090->9090/tcp
+redis        redis:latest                     "docker-entrypoint.s…"   redis        5 seconds ago   Up 5 seconds                      0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp
+[root@docker prom]# 
+
+4.去访问cadvisor的效果
+http://192.168.100.128:8080/
+使用浏览器去访问宿主机的ip+8080端口
+
+
+
+
+安装grafana出图工具
+下载grafana的镜像
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/grafana/grafana:9.5.5
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/grafana/grafana:9.5.5  docker.io/grafana/grafana:9.5.5
+
+启动容器
+docker run -d --name=grafana -p 3000:3000 grafana/grafana:9.5.5
+
+[root@scdocker docker]# docker ps
+CONTAINER ID   IMAGE                                COMMAND                   CREATED          STATUS                    PORTS                                       NAMES
+aa2c0911970c   grafana/grafana                      "/run.sh"                 16 seconds ago   Up 5 seconds              0.0.0.0:3000->3000/tcp, :::3000->3000/tcp   grafana
+
+通过web方式登录
+http://192.168.100.128:3000
+
+默认的用户名和密码都是
+admin
+admin
+
+1.在grafana里添加数据源是Prometheus的数据库
+
+2.使用模板
+  13946 模板编号
+
+  19724  比较好
+  
+ https://grafana.com/grafana/dashboards/
+   这个网站里有很多的模版
+  模版都是别人制作出来
+
+
+
+
+总结：
+  容器的监控
+    1.cadvisor --》数据采集容器（工具）
+    2.Prometheus --》数据存储软件（时序数据库）
+    3.grafana --》出图工具--》模板（定义好了很多的监控指标，不需要自己去画图）
+
+cadvisor --》Prometheus--》grafana--》出图模版
+
+
+练习：
+    部署cadvisor+Prometheus+grafana
+
+
+扩展：
+  使用Prometheus去监控常规的服务器，监控（cpu、内存、磁盘IO、网络带宽）
+  node_exporter  是Prometheus的agent代理程序，帮助Prometheus去宿主机上采集数据
+
+  Prometheus也可以监控具体的某个软件，例如nginx、MySQL等
+  nginx_VTS_exporter
+  mysqld_exporter
+
+  在docker宿主机上安装了Prometheus监控软件
+  docker  192.168.203.128   Prometheus
+  nfs     192.168.203.146   node_exporter
+
+
+在ubuntu服务器上安装node_exporter
+1.上传node-exporter软件，然后解压获得node_exporter软件
+root@sc:~# mkdir /prom
+root@sc:~# cd /prom
+root@sc:/prom# 
+
+root@sc:/prom# rz -E
+rz waiting to receive.
+root@sc:/prom# ls
+node_exporter-1.9.0.linux-amd64.tar.gz
+root@sc:/prom# 
+
+
+安装lrzsz软件，上传node_exporter-1.4.0-rc.0.linux-amd64.tar.gz软件包到nfs服务器
+[root@nfs prom]# yum install lrzsz -y  
+[root@nfs prom]# ls
+[root@nfs prom]# rz -E
+rz waiting to receive.
+[root@nfs prom]# ls
+node_exporter-1.4.0-rc.0.linux-amd64.tar.gz
+
+解压上传的压缩包
+root@sc:/prom# tar xf  node_exporter-1.9.0.linux-amd64.tar.gz 
+
+root@sc:/prom# ls
+node_exporter-1.9.0.linux-amd64  node_exporter-1.9.0.linux-amd64.tar.gz
+root@sc:/prom# 
+重命名解压后的目录的名字为node_exporter
+root@sc:/prom# mv node_exporter-1.9.0.linux-amd64     node_exporter
+root@sc:/prom# ls
+node_exporter  node_exporter-1.9.0.linux-amd64.tar.gz
+root@sc:/prom# 
+
+进入目录
+[root@nfs prom]# cd node_exporter
+[root@nfs node_exporter]# ls
+LICENSE  node_exporter  NOTICE
+[root@nfs node_exporter]#
+
+  node_exporter 采集数据的程序
+
+2.启动node_exporter 代理软件
+root@sc:/prom# PATH=/prom/node_exporter:$PATH      修改PATH变量
+root@sc:/prom# which  node_exporter
+/prom/node_exporter/node_exporter
+root@sc:/prom# 
+
+永久修改PATH变量写到/etc/profile文件里
+[root@nfs node_exporter]# echo  'PATH=/prom/node_exporter:$PATH' >>/etc/profile   推荐
+
+
+bash 环境变量的加载顺序
+  /etc/profile --->/root/.bash_profile--->/root/.bashrc-->/etc/bashrc
+
+重新登录
+[root@nfs node_exporter]# su
+[root@nfs node_exporter]# which node_exporter
+/prom/node_exporter/node_exporter
+[root@nfs node_exporter]# echo $PATH
+/prom/node_exporter:/sc:/usr/local/sbin:/usr/local/bin:/usr/sbin:/usr/bin:/root/bin
+[root@nfs node_exporter]# 
+检查9100端口是否被占用，没有使用，我们就可以使用9100
+[root@nfs node_exporter]# netstat -anplut|grep 9100
+指定node_exporter程序监听9100端口，并且在后台运行
+nohup 命令的作用是不接受hup信号
+&  将程序放到后台运行
+
+root@sc:/prom# nohup node_exporter   --web.listen-address="0.0.0.0:9100"  &
+[1] 5348
+root@sc:/prom# nohup: ignoring input and appending output to 'nohup.out'
+
+root@sc:/prom# ps aux|grep node_exporter
+root        5348  0.0  0.1 1240872 14080 pts/0   Sl   09:15   0:00 node_exporter --web.listen-address=0.0.0.0:9100
+root        5354  0.0  0.0   6676  2304 pts/0    S+   09:15   0:00 grep --color=auto node_exporter
+root@sc:/prom# 
+
+可以通过结束进程的方式杀死node_exporter进程
+[root@nfs node_exporter]# kill -9 5348
+[root@nfs node_exporter]# ps aux|grep node
+root       6147  0.0  0.0 112824   984 pts/0    S+   16:07   0:00 grep --color=auto node
+[1]+  已杀死               nohup node_exporter --web.listen-address="0.0.0.0:9100"
+重启node_exporter
+[root@nfs node_exporter]#  nohup node_exporter  --web.listen-address="0.0.0.0:9100"  & 
+[1] 6154
+[root@nfs node_exporter]# nohup: 忽略输入并把输出追加到"nohup.out"
+
+[root@nfs node_exporter]# ps aux|grep node
+root       6154  0.3  0.7 716288 13116 pts/0    Sl   16:08   0:00 node_exporter --web.listen-address=0.0.0.0:9100
+root       6159  0.0  0.0 112824   988 pts/0    S+   16:08   0:00 grep --color=auto node
+[root@nfs node_exporter]# 
+3.访问测试是否安装成功
+http://192.168.100.129:9100
+
+
+
+
+
+5.在prometheus server里添加被监控主机
+
+在server上操作
+[root@docker prom]# pwd
+/prom
+[root@docker prom]# ls
+docker-compose.yml  docker-compose.yml.back  prometheus.yml
+[root@docker prom]# 
+prometheus.yml 修改配置文件
+
+[root@ansible sc]# ls
+cadvisor.tar  docker-compose.yml  prometheus.yml
+[root@ansible sc]# cat prometheus.yml 
+scrape_configs:
+  # The job name is added as a label `job=<job_name>` to any timeseries scraped from this config.
+  - job_name: "prometheus"
+    static_configs:
+      - targets: ["192.168.100.128:9090"]
+        labels:
+          app: "prometheus"
+  - job_name: "cadvisor"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["192.168.100.128:8080"]
+        labels:
+          app: "cadvisor"
+  - job_name: "ubuntu"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["192.168.100.129:9100"]
+        labels:
+          app: "ubuntu"
+
+
+[root@ansible sc]# 
+
+
+#添加需要监控的ubuntu服务器的信息
+  - job_name: "ubuntu"
+    scrape_interval: 5s
+    static_configs:
+      - targets: ["192.168.100.129:9100"]
+        labels:
+          app: "ubuntu"
+
+重启compose对应的Prometheus容器
+[root@docker prom]# docker compose restart
+[+] restart 0/3
+ ⠹ Container prometheus Restarting                                                          1.1s 
+ ⠹ Container cadvisor   Restarting                                                          1.1s 
+ ⠹ Container redis      Restarting                                                          1.1s 
+[root@docker prom]# 
+
+访问Prometheus 服务器，能看到ubuntu和cadvisor的信息
+
+http://192.168.100.128:9090/targets
+
+Targets
+cadvisor (1/1 up)
+ubuntu (1/1 up)
+
+
+
+6.再次访问grafana，添加node_exporter模板，展示监控的数据
+http://192.168.100.128:3000/
+
+1.添加一个nfs相关的Prometheus的数据源
+2.导入监控node_exporter的dashboard模板
+  8919
+
+
+访问看效果
+
+
+
+===============
+
+另外一种方式设置node_exporter开机启动，将node_exporter配置成一个linux里的服务，通过systemctl来控制
+[root@nfs ~]# vim /usr/lib/systemd/system/node_exporter.service
+[root@nfs ~]# cat /usr/lib/systemd/system/node_exporter.service 
+[Unit]
+Description=https://prometheus.io
+
+[Service]
+Restart=on-failure
+ExecStart=/prom/node_exporter/node_exporter --web.listen-address=:9100
+ExecReload=/bin/kill -HUP $MAINPID
+
+[Install]
+WantedBy=multi-user.target
+
+[root@nfs ~]# 
+重载服务的配置
+[root@nfs ~]# systemctl daemon-reload
+[root@nfs ~]# systemctl status node_exporter
+● node_exporter.service - https://prometheus.io
+   Loaded: loaded (/usr/lib/systemd/system/node_exporter.service; disabled; vendor preset: disabled)
+   Active: inactive (dead)
+
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=node_exporter.go:115 level=info collector=timex
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=node_exporter.go:115 level=info collector=udp_queues
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=node_exporter.go:115 level=info collector=uname
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=node_exporter.go:115 level=info collector=vmstat
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=node_exporter.go:115 level=info collector=xfs
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=node_exporter.go:115 level=info collector=zfs
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=node_exporter.go:199 level=info msg="Listening on" address=:9100
+1月 18 17:16:49 nfs node_exporter[2572]: ts=2024-01-18T09:16:49.801Z caller=tls_config.go:195 level=info msg="TLS is disabled." http2=false
+1月 18 17:17:13 nfs systemd[1]: Stopping https://prometheus.io...
+1月 18 17:17:13 nfs systemd[1]: Stopped https://prometheus.io.
+
+启动node_exporter
+
+[root@nfs ~]# systemctl start  node_exporter
+[root@nfs ~]# systemctl status node_exporter
+● node_exporter.service - https://prometheus.io
+   Loaded: loaded (/usr/lib/systemd/system/node_exporter.service; disabled; vendor preset: disabled)
+   Active: active (running) since 四 2024-01-18 17:18:56 CST; 1s ago
+ Main PID: 2634 (node_exporter)
+    Tasks: 5
+   Memory: 11.4M
+   CGroup: /system.slice/node_exporter.service
+           └─2634 /prom/node_exporter/node_exporter --web.listen-address=:9100
+
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=thermal_zone
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=time
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=timex
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=udp_queues
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=uname
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=vmstat
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=xfs
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=zfs
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:199 level=info msg="Listening on" address=:9100
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=tls_config.go:195 level=info msg="TLS is disabled." http2=false
+[root@nfs ~]# 
+
+设置node_exporter 服务开机启动
+[root@nfs ~]# systemctl enable  node_exporter
+Created symlink from /etc/systemd/system/multi-user.target.wants/node_exporter.service to /usr/lib/systemd/system/node_exporter.service.
+[root@nfs ~]# systemctl status node_exporter
+● node_exporter.service - https://prometheus.io
+   Loaded: loaded (/usr/lib/systemd/system/node_exporter.service; enabled; vendor preset: disabled)
+   Active: active (running) since 四 2024-01-18 17:18:56 CST; 1min 16s ago
+ Main PID: 2634 (node_exporter)
+   CGroup: /system.slice/node_exporter.service
+           └─2634 /prom/node_exporter/node_exporter --web.listen-address=:9100
+
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=thermal_zone
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=time
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=timex
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=udp_queues
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=uname
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=vmstat
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=xfs
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:115 level=info collector=zfs
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=node_exporter.go:199 level=info msg="Listening on" address=:9100
+1月 18 17:18:56 nfs node_exporter[2634]: ts=2024-01-18T09:18:56.663Z caller=tls_config.go:195 level=info msg="TLS is disabled." http2=false
+[root@nfs ~]# 
+

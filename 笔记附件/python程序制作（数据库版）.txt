@@ -1,0 +1,257 @@
+案例3：  python代码（需要使用数据库mysql，redis）
+微服务： 微小的服务 --》每一个服务运行在一个docker容器里
+
+				核心程序（python）+ mysql + redis
+
+
+镜像制作
+	python编程语言--》写一段核心的代码  --》核心应用程序
+	[root@docker python2]# ls
+[root@docker python2]# pwd
+/myapp/python2
+[root@docker python2]#
+
+第一步： 编辑app.py核心应用程序
+[root@localhost python2]# vim  app.py
+from flask import Flask
+from redis import Redis, RedisError
+import os
+import socket
+
+# Connect to Redis
+redis = Redis(host="redis", db=0, socket_connect_timeout=2, socket_timeout=2)
+
+app = Flask(__name__)
+
+@app.route("/")
+def hello():
+    try:
+        visits = redis.incr("counter")
+    except RedisError:
+        visits = "<i>cannot connect to Redis, counter disabled</i>"
+
+    html = "<h3>Hello {name}!</h3>" \
+           "<b>Hostname:</b> {hostname}<br/>" \
+           "<b>Visits:</b> {visits}"
+    return html.format(name=os.getenv("NAME", "world"), hostname=socket.gethostname(), visits=visits)
+
+if __name__ == "__main__":
+    app.run(host='0.0.0.0', port=80)
+
+第2步： 编辑解决python程序依赖的文件
+[root@localhost python]# vim  requirements.txt 
+flask
+redis
+第3步： 编辑Dockerfile文件
+vim   Dockerfile
+
+FROM python:2.7-slim  指定一个拥有python环境的基础镜像
+WORKDIR /app  指定进入容器的时候的目录
+ADD  .   /app   将宿主机当前目录下的所有文件复制到容器里的/app目录下  --》COPY
+
+RUN pip install --trusted-host  https://pypi.tuna.tsinghua.edu.cn/simple -r requirements.txt  安装python程序需要的依赖库
+
+
+EXPOSE 80   申明我们的容器对外开放（暴露）80 
+ENV NAME World   #定义一个环境变量，变量名为NAME  变量的值是World
+ENV AUTHOR cali  #定义一个环境变量 ，变量名为AUTHOR  变量的值为cali
+
+CMD ["python","app.py"]  定义容器在启动的时候会执行 python  app.py  -->ENTRYPOINT是一样的
+
+[root@localhost python]# cat Dockerfile 
+FROM  python:3.9-slim
+WORKDIR  /app
+ADD .   /app
+RUN  pip install   -r requirements.txt  -i https://mirrors.aliyun.com/pypi/simple/
+EXPOSE 80
+ENV NAME=sanchuang
+ENV AUTHOR=califeng
+CMD ["python","app.py"]
+[root@localhost python]# 
+第4步：生成镜像文件
+4.1 确认下基础镜像是否存在
+[root@localhost liujiale]# docker  images
+REPOSITORY    TAG        IMAGE ID       CREATED          SIZE
+python:3.9-slim          7b2231316373        187MB         47.3MB   
+[root@docker python2]# pwd
+/myapp/python2
+[root@docker python2]# ls
+app.py  Dockerfile  requirements.txt
+[root@docker python2]#
+制作镜像
+[root@docker python2]# docker build -t scweb:1.0  .
+[+] Building 8.9s (9/9) FINISHED                                                              docker:default
+ => [internal] load build definition from Dockerfile                                                    0.1s
+ => => transferring dockerfile: 245B                                                                    0.0s
+ => [internal] load metadata for docker.io/library/python:3.9-slim                                      0.0s
+ => [internal] load .dockerignore                                                                       0.0s
+ => => transferring context: 2B                                                                         0.0s
+ => [1/4] FROM docker.io/library/python:3.9-slim@sha256:7b223131637329f41843207a9d1d63d1fc01b6564d3d2b  0.0s
+ => => resolve docker.io/library/python:3.9-slim@sha256:7b223131637329f41843207a9d1d63d1fc01b6564d3d2b  0.0s
+ => [internal] load build context                                                                       0.0s
+ => => transferring context: 1.00kB                                                                     0.0s
+ => CACHED [2/4] WORKDIR  /app                                                                          0.0s
+ => [3/4] ADD .   /app                                                                                  0.0s
+ => [4/4] RUN  pip install   -r requirements.txt  -i https://mirrors.aliyun.com/pypi/simple/            7.2s
+ => exporting to image                                                                                  1.4s 
+ => => exporting layers                                                                                 0.8s 
+ => => exporting manifest sha256:8a493dd3e77f98923cb7cbe460f0d5fdab2f979663c872b8c07ff2f9fc39c494       0.0s 
+ => => exporting config sha256:f5d8cae3eeb18e8ca96e8b9515d912b0e816099b90046437e71ee15916afbb9b         0.0s 
+ => => exporting attestation manifest sha256:799c565bf305c2b4b32a30c769a7188d4fb2fec387a09c98511e53493  0.0s 
+ => => exporting manifest list sha256:b7cee232a88889bcb0fd7f1a66750bf6ac29a3243676520d15f5b0488497c852  0.0s 
+ => => naming to docker.io/library/scweb:1.0                                                            0.0s
+ => => unpacking to docker.io/library/scweb:1.0                                                         0.5s
+[root@docker python2]# 
+[root@docker python2]# docker images
+                                                                                   i Info →   U  In Use
+IMAGE                                                        ID             DISK USAGE   CONTENT SIZE   EXTRA
+scweb:1.0                                                    b7cee232a888        210MB         53.1MB 
+
+
+第5步： 启动容器使用镜像
+[root@docker python2]# docker run  -d  --name scweb-1  -p 8050:80  scweb:1.0
+99950d3ebe02e2f3696822f698de99b92b9f2dac8815f55481ab7efc2b9e0d10
+[root@docker python2]# docker ps
+CONTAINER ID   IMAGE         COMMAND           CREATED         STATUS             PORTS                                     NAMES
+99950d3ebe02   scweb:1.0     "python app.py"   2 seconds ago   Up 1 second        0.0.0.0:8050->80/tcp, [::]:8050->80/tcp   scweb-1
+
+[root@docker python2]# 
+
+第6步： 访问python编写的网站
+	打开浏览器去访问
+	http://192.168.100.128:8050/
+Hello sanchuang!
+Hostname: 99950d3ebe02
+Visits: cannot connect to Redis, counter disabled
+
+不能访问redis数据库，因为我们没有启动redis的容器
+
+
+# 创建名为 my-custom-network 的自定义网络，指定子网和网关
+docker network create --driver bridge  --subnet 172.20.0.0/16   --gateway 172.20.0.1  my-custom-network
+
+
+[root@docker python2]# docker network create --driver bridge  --subnet 172.20.0.0/16   --gateway 172.20.0.1  my-custom-network
+7a11d1a1ab2bbc1f3b5f9171333711d38f7706fc70f18711c95858f32369924e
+[root@docker python2]# docker network ls
+NETWORK ID     NAME                DRIVER    SCOPE
+f466922f7c5a   bridge              bridge    local
+a1dcc1eb7482   host                host      local
+7a11d1a1ab2b   my-custom-network   bridge    local
+4f5afa52a83a   none                null      local
+[root@docker python2]# 
+
+启动容器并指定固定 IP
+
+docker run -d --name nginx-fixed-ip  -p  8051:80 --network my-custom-network --ip 172.20.0.10 nginx
+[root@docker python2]# docker run -d --name nginx-fixed-ip  -p  8051:80 --network my-custom-network --ip 172.20.0.10 nginx
+5ea71ef85d6afdfb0b6aaffb1b7e8e4a13aacc5b8d8b66febd2632f95105352c
+[root@docker python2]# docker ps
+CONTAINER ID   IMAGE         COMMAND                  CREATED          STATUS          PORTS                                     NAMES
+5ea71ef85d6a   nginx         "/docker-entrypoint.…"   3 seconds ago    Up 2 seconds    0.0.0.0:8051->80/tcp, [::]:8051->80/tcp   nginx-fixed-ip
+
+
+
+
+/etc/hosts 文件--》自己给自己做域名解析使用
+
+[root@docker python2]# cat /etc/hosts
+# Loopback entries; do not change.
+# For historical reasons, localhost precedes localhost.localdomain:
+127.0.0.1   localhost localhost.localdomain localhost4 localhost4.localdomain4
+::1         localhost localhost.localdomain localhost6 localhost6.localdomain6
+# See hosts(5) for proper format and other examples:
+# 192.168.1.10 foo.example.org foo
+# 192.168.1.13 bar.example.org bar
+192.168.100.1  www.baidu.com
+192.168.100.128  www.jd.com
+
+
+互联网上每台服务器都会有一个固定的公网ip地址，这个ip地址是唯一
+每个人都有一个手机号码 --》记手机号码难记 --》手机--》通讯簿   名字+手机号 --》找名字
+
+域名： 
+www.baidu.com  ---》  183.2.172.177
+
+专门服务器： DNS服务器  ，给其他的电脑做域名解析    domain  name  system  域名解析系统
+
+			www.baidu.com  --->DNS服务器 ---》183.2.172.177
+
+			DNS服务器一般的运营商都会提供，可以免费的使用
+			DNS服务器：  114.114.114.114  8.8.8.8
+			要求大家的电脑能上网
+
+
+===
+启动一个redis的数据库容器
+1.获取redis镜像文件
+
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis:latest
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/redis:latest  docker.io/redis:latest
+
+2.启动redis容器
+[root@docker python2]# docker run  -d  --name sc-redis-1  -p 6379:6379  redis
+c18433483c90cd7db8c9aac9855ad3e1dd92c6c6fb6db845716412d588f34c54
+[root@docker python2]# docker  ps
+CONTAINER ID   IMAGE         COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+c18433483c90   redis         "docker-entrypoint.s…"   3 seconds ago    Up 2 seconds    0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp   sc-redis-1
+5ea71ef85d6a   nginx         "/docker-entrypoint.…"   15 minutes ago   Up 15 minutes   0.0.0.0:8051->80/tcp, [::]:8051->80/tcp       nginx-fixed-ip
+99950d3ebe02   scweb:1.0     "python app.py"          25 minutes ago   Up 25 minutes   0.0.0.0:8050->80/tcp, [::]:8050->80/tcp       scweb-1
+ad99b0e3fc08   scflask:1.1   "python app.py"          19 hours ago     Up 2 hours      0.0.0.0:5000->80/tcp, [::]:5000->80/tcp       scflask-1
+[root@docker python2]#
+
+启动一个新的scweb镜像的容器
+
+docker run  -d  --name scweb-2   --link   sc-redis-1:redis  -p 8052:80  scweb:1.0
+
+ --link sc-redis-1:redis 
+          容器名    别名
+          在后面启动的scweb-2容器的/etc/hosts文件里添加一条记录
+          172.17.0.4  redis
+
+为什么要使用redis这个名字？容器链接的时候，因为python程序代码里使用的主机名是redis，去访问redis数据的时候，访问的主机名就是redis
+
+# Connect to Redis
+redis = Redis(host="redis", db=0, socket_connect_timeout=2, socket_timeout=2)
+
+
+[root@docker python2]# docker run  -d  --name scweb-2 --link sc-redis-1:redis  -p 8052:80  scweb:1.0
+c898dc6f32ab9ef7440a86cdbe60cbae39d81e928f04366ddb98b7d1400650b0
+[root@docker python2]# docker ps
+CONTAINER ID   IMAGE         COMMAND                  CREATED          STATUS          PORTS                                         NAMES
+c898dc6f32ab   scweb:1.0     "python app.py"          3 seconds ago    Up 2 seconds    0.0.0.0:8052->80/tcp, [::]:8052->80/tcp       scweb-2
+c18433483c90   redis         "docker-entrypoint.s…"   5 minutes ago    Up 5 minutes    0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp   sc-redis-1
+5ea71ef85d6a   nginx         "/docker-entrypoint.…"   20 minutes ago   Up 20 minutes   0.0.0.0:8051->80/tcp, [::]:8051->80/tcp       nginx-fixed-ip
+99950d3ebe02   scweb:1.0     "python app.py"          30 minutes ago   Up 30 minutes   0.0.0.0:8050->80/tcp, [::]:8050->80/tcp       scweb-1
+ad99b0e3fc08   scflask:1.1   "python app.py"          19 hours ago     Up 2 hours      0.0.0.0:5000->80/tcp, [::]:5000->80/tcp       scflask-1
+[root@docker python2]#
+
+验证是否在/etc/hosts添加了域名解析记录
+[root@docker python2]# docker exec -it scweb-2 bash
+root@c898dc6f32ab:/app# cat /etc/hosts
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::	ip6-localnet
+ff00::	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.4	redis c18433483c90 sc-redis-1
+172.17.0.5	c898dc6f32ab
+root@c898dc6f32ab:/app# 
+
+
+再次访问新的web容器的网站
+http://192.168.100.128:8052/
+Hello sanchuang!
+Hostname: c898dc6f32ab
+Visits: 8
+
+===
+制作一个某软件的镜像
+		1.核心代码
+		2.写Dockerfile
+
+		java  --》jdk java的运行环境--》基础镜像
+		python  --》python环境的基础镜像
+		c   --》linux  --》二进制的程序
+		go --》

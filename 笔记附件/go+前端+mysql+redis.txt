@@ -1,0 +1,324 @@
+案例5： go代码+前端页面+mysql数据库+redis数据库
+
+[root@docker myapp]# cd /myapp/
+[root@docker myapp]# ls
+busybox  c  python  python2
+[root@docker myapp]# mkdir go
+[root@docker myapp]# cd go
+[root@docker go]# ls
+[root@docker go]# 
+上传go+html+mysql+redis.zip 文件到linux系统里
+[root@docker go]# ls
+go+html+mysql+redis.zip
+[root@docker go]#
+安装unzip软件
+[root@docker go]# yum install unzip -y
+[root@docker go]# unzip go+html+mysql+redis.zip 
+Archive:  go+html+mysql+redis.zip
+   creating: .idea/
+  inflating: .idea/.gitignore        
+  inflating: .idea/backend.iml       
+  inflating: .idea/modules.xml       
+  inflating: .idea/workspace.xml     
+  inflating: go.mod                  
+  inflating: go.sum                  
+  inflating: info.sql                
+  inflating: Readme.md               
+  inflating: server.go               
+   creating: static/
+  inflating: static/add_student.js   
+  inflating: static/login.js         
+  inflating: static/search_student.js  
+  inflating: static/styles.css       
+   creating: templates/
+  inflating: templates/add_student.html  
+  inflating: templates/guid.html     
+  inflating: templates/login.html    
+  inflating: templates/search_student.html  
+[root@docker go]# ls
+go+html+mysql+redis.zip  go.mod  go.sum  info.sql  Readme.md  server.go  static  templates
+[root@docker go]# 
+
+server.go    核心的程序代码
+
+static  前端css和js文件
+templates  网页模版文件 html文件
+info.sql  导出的数据库的初始化数据，建表建库，初始化的数据
+====
+
+1.提前启动一个MySQL和redis的容器
+
+需要你的系统里有mysql和redis的镜像
+mysql:8.4.6
+redis:latest
+
+删除原来存在的redis的容器
+启动redis容器
+[root@docker go]# docker run -d  -p 6379:6379  --name  sc-redis-1 redis
+fdd67f258c15686699f3fa136d3c4c5d21fbd985470cc36f5b4389ea8d01a89a
+[root@docker go]# docker ps
+CONTAINER ID   IMAGE         COMMAND                  CREATED         STATUS         PORTS                                         NAMES
+fdd67f258c15   redis         "docker-entrypoint.s…"   4 seconds ago   Up 3 seconds   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp   sc-redis-1
+
+启动MySQL容器
+[root@docker go]# docker run -d --name go-mysql-1 -p 33066:3306  -e "MYSQL_ROOT_PASSWORD=sc123456"  mysql:8.4.6
+4dd33f5492a94ab841b1798269c3c5428724ed29b20093e36fd30333d2fc6daa
+[root@docker go]# docker ps
+CONTAINER ID   IMAGE         COMMAND                  CREATED         STATUS         PORTS                                                      NAMES
+4dd33f5492a9   mysql:8.4.6   "docker-entrypoint.s…"   5 seconds ago   Up 4 seconds   33060/tcp, 0.0.0.0:33066->3306/tcp, [::]:33066->3306/tcp   go-mysql-1
+fdd67f258c15   redis         "docker-entrypoint.s…"   3 minutes ago   Up 3 minutes   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp                sc-redis-1
+[root@docker go]#
+
+
+进入MySQL的容器，创建一个库scdb
+
+[root@docker go]# docker exec -it go-mysql-1  bash
+bash-5.1# mysql -uroot -p'sc123456'
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 8
+Server version: 8.4.6 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> create database scdb;   创建库scdb
+Query OK, 1 row affected (0.01 sec)
+
+mysql> show databases;   
++--------------------+
+| Database           |
++--------------------+
+| information_schema |
+| mysql              |
+| performance_schema |
+| scdb               |
+| sys                |
++--------------------+
+5 rows in set (0.01 sec)
+
+mysql> exit
+Bye
+bash-5.1# exit
+exit
+[root@docker go]#
+
+然后导入info.sql里的内容到scdb库
+
+[root@docker go]# pwd
+/myapp/go
+[root@docker go]# ls
+go+html+mysql+redis.zip  go.mod  go.sum  info.sql  Readme.md  server.go  static  templates
+复制宿主机的info.sql文件到 go-mysql-1容器里
+[root@docker go]# docker cp info.sql  go-mysql-1:/
+Successfully copied 4.61kB to go-mysql-1:/
+[root@docker go]# 
+
+
+[root@docker go]# docker exec -it go-mysql-1 bash
+bash-5.1# pwd
+/
+bash-5.1# ls
+afs  boot  docker-entrypoint-initdb.d  home	 lib	media  opt   root  sbin  sys  usr
+bin  dev   etc			       info.sql  lib64	mnt    proc  run   srv	 tmp  var
+bash-5.1# 
+将info.sql里的数据导入到MySQL里
+将info.sql里的数据导入到scdb库里，会创建2个表 user和student表，同时会插入数据 --》数据的初始化
+
+bash-5.1# mysql -uroot -p'sc123456' scdb < info.sql 
+mysql: [Warning] Using a password on the command line interface can be insecure.
+bash-5.1#
+
+核实验证是否导入数据成功
+bash-5.1# mysql -uroot -p'sc123456'                
+mysql: [Warning] Using a password on the command line interface can be insecure.
+Welcome to the MySQL monitor.  Commands end with ; or \g.
+Your MySQL connection id is 10
+Server version: 8.4.6 MySQL Community Server - GPL
+
+Copyright (c) 2000, 2025, Oracle and/or its affiliates.
+
+Oracle is a registered trademark of Oracle Corporation and/or its
+affiliates. Other names may be trademarks of their respective
+owners.
+
+Type 'help;' or '\h' for help. Type '\c' to clear the current input statement.
+
+mysql> use scdb
+Reading table information for completion of table and column names
+You can turn off this feature to get a quicker startup with -A
+
+Database changed
+mysql> show tables;
++----------------+
+| Tables_in_scdb |
++----------------+
+| students       |
+| users          |
++----------------+
+2 rows in set (0.00 sec)
+
+mysql> select * from users;
++----+----------+----------+
+| id | username | password |
++----+----------+----------+
+|  1 | cali     | 2022     |
++----+----------+----------+
+1 row in set (0.00 sec)
+
+mysql> select * from students;
++----+-------+-------+
+| id | name  | grade |
++----+-------+-------+
+|  1 | cali  | 2020? |
+|  2 | feng  | 2021? |
+|  3 | test4 | 2024? |
+|  4 | test5 | 2025? |
++----+-------+-------+
+4 rows in set (0.00 sec)
+
+mysql> 
+
+mysql> exit
+Bye
+bash-5.1# exit
+exit
+[root@docker go]# 
+
+
+=====
+将server.go和静态文件制作成镜像
+1.修改server.go的数据库部分的配置
+[root@docker go]# pwd
+/myapp/go
+[root@docker go]# ls
+go+html+mysql+redis.zip  go.mod  go.sum  info.sql  Readme.md  server.go  static  templates
+[root@docker go]# vim  server.go
+
+//mysql连接和 Redis 连接
+var db *sql.DB
+var rdb *redis.Client
+
+const (
+        DB_USER     = "root"
+        DB_PASSWORD = "sc123456"
+        DB_NAME     = "scdb"
+        DB_HOST         = "tcp(gomysql:3306)/"
+        REDIS_HOST      = "goredis:6379"
+)
+
+以上代码里使用容器的域名进行连接
+
+
+安装部署golang语言环境
+[root@docker go]# yum install  golang -y
+[root@docker go]# go version  查看go语言的版本
+go version go1.25.5 (Red Hat 1.25.5-1.el10) linux/amd64
+[root@docker go]# 
+配置go语言下载软件的国内代理网站
+[root@docker go]# go env -w  GOPROXY=https://goproxy.cn,direct  
+[root@docker go]# 
+[root@docker go]# go mod init web  初始化一个项目名字为web
+go: creating new go.mod: module web
+go: to add module requirements and sums:
+	go mod tidy
+[root@docker go]# go mod tidy  去下载这个项目需要的库，解决server.go里导入的库，将这些库下载到本地
+
+将server.go编译成goweb的二进制程序
+[root@docker go]# go build -o goweb  .
+
+[root@docker go]# ls
+go+html+mysql+redis.zip  go.sum  info.sql   server.go  templates
+go.mod                   goweb   Readme.md  static
+[root@docker go]# mkdir goweb-image  新建一个文件夹
+[root@docker go]# ls
+go+html+mysql+redis.zip  go.sum  goweb-image  Readme.md  static
+go.mod                   goweb   info.sql     server.go  templates
+[root@docker go]# cp goweb static/ templates/  goweb-image/  -r  复制核心的二进制程序和配套的静态网页文件到制作镜像的目录
+[root@docker go]# cd goweb-image/
+[root@docker goweb-image]# ls
+goweb  static  templates
+[root@docker goweb-image]#
+
+
+下载ubuntu:22.04的基础镜像
+docker pull swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/ubuntu:22.04
+docker tag  swr.cn-north-4.myhuaweicloud.com/ddn-k8s/docker.io/ubuntu:22.04  docker.io/ubuntu:22.04
+
+编写Dockerfile
+[root@docker goweb-image]# vim Dockerfile
+FROM ubuntu:22.04
+WORKDIR /go
+COPY .  /go
+ENTRYPOINT ["/go/goweb"]
+制作镜像
+
+[root@docker goweb-image]# ls
+Dockerfile  goweb  static  templates
+[root@docker goweb-image]# 
+
+[root@docker goweb-image]# docker build -t goweb:1.0  .
+[+] Building 2.6s (8/8) FINISHED                                                  docker:default
+ => [internal] load build definition from Dockerfile                                        0.0s
+ => => transferring dockerfile: 104B                                                        0.0s
+ => [internal] load metadata for docker.io/library/ubuntu:22.04                             0.0s
+ => [internal] load .dockerignore                                                           0.0s
+ => => transferring context: 2B                                                             0.0s
+ => [internal] load build context                                                           0.4s
+ => => transferring context: 32.01MB                                                        0.4s
+ => CACHED [1/3] FROM docker.io/library/ubuntu:22.04@sha256:3c3de9608507804525ff4303874525  0.0s
+ => => resolve docker.io/library/ubuntu:22.04@sha256:3c3de9608507804525ff4303874525760ea36  0.0s
+ => [2/3] WORKDIR /go                                                                       0.0s
+ => [3/3] COPY .  /go                                                                       0.2s
+ => exporting to image                                                                      1.9s
+ => => exporting layers                                                                     1.6s
+ => => exporting manifest sha256:66af8a500720aee074745789179e24c16cc713994f6eb3953f7385352  0.0s
+ => => exporting config sha256:e31ec2260d37ae3ecdf47a6327176e6be981bdfcd5574105ef93a9e9082  0.0s
+ => => exporting attestation manifest sha256:ce0caef351b557a030b31272cdecc82c2d8adab36ad4d  0.0s
+ => => exporting manifest list sha256:8544a5f2e938ea50792a41a5ac1addb3b745d3a4d83bf77402b5  0.0s
+ => => naming to docker.io/library/goweb:1.0                                                0.0s
+ => => unpacking to docker.io/library/goweb:1.0                                             0.2s
+[root@docker goweb-image]#
+查看制作的镜像
+[root@docker goweb-image]# docker images
+                                                                             i Info →   U  In Use
+IMAGE                                            ID             DISK USAGE   CONTENT SIZE   EXTRA
+alpine:latest                                    33735bd63cf8       11.7MB         3.63MB        
+busybox:latest                                   ea6157971956       9.16MB         4.67MB    U   
+goweb:1.0                                        8544a5f2e938        161MB         45.8MB     
+
+运行镜像启动容器
+docker  run  -d  --name sc-goweb-1  -p 8090:8080  --link  go-mysql-1:gomysql --link sc-redis-1:goredis  goweb:1.0
+[root@docker goweb-image]# docker ps
+CONTAINER ID   IMAGE         COMMAND                  CREATED          STATUS          PORTS                                                      NAMES
+59477f2a9ac6   goweb:1.0     "/go/goweb"              5 seconds ago    Up 4 seconds    0.0.0.0:8090->8080/tcp, [::]:8090->8080/tcp                sc-goweb-1
+4dd33f5492a9   mysql:8.4.6   "docker-entrypoint.s…"   52 minutes ago   Up 52 minutes   33060/tcp, 0.0.0.0:33066->3306/tcp, [::]:33066->3306/tcp   go-mysql-1
+fdd67f258c15   redis         "docker-entrypoint.s…"   56 minutes ago   Up 56 minutes   0.0.0.0:6379->6379/tcp, [::]:6379->6379/tcp                sc-redis-1
+
+进入容器内部查看是否在/etc/hosts文件里添加域名解析记录
+[root@docker goweb-image]# docker exec -it sc-goweb-1 bash
+root@59477f2a9ac6:/go# cat /etc/hosts
+127.0.0.1	localhost
+::1	localhost ip6-localhost ip6-loopback
+fe00::	ip6-localnet
+ff00::	ip6-mcastprefix
+ff02::1	ip6-allnodes
+ff02::2	ip6-allrouters
+172.17.0.2	gomysql 4dd33f5492a9 go-mysql-1
+172.17.0.4	goredis fdd67f258c15 sc-redis-1
+172.17.0.3	59477f2a9ac6
+root@59477f2a9ac6:/go# 
+root@59477f2a9ac6:/go# exit
+exit
+[root@docker goweb-image]#
+
+验证sc-goweb-1的容器能否访问
+
+http://192.168.100.128:8090/
+
+默认登录的用户名是cali  密码是2022
